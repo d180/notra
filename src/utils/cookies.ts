@@ -23,7 +23,7 @@ export const setLastVisitedOrganization = async (
 
       await cookieStore.set(cookieOptions);
     } catch (error) {
-      console.error("Failed to set cookie:", error);
+      // Failed to set cookie - silently continue
     }
   } else if (typeof document !== "undefined") {
     const secureFlag = isSecure ? "; Secure" : "";
