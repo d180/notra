@@ -17,7 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
-import { generateOrganizationAvatar } from "@/lib/utils";
+import { generateOrganizationAvatar, slugify } from "@/lib/utils";
 import { setLastVisitedOrganization } from "@/utils/cookies";
 import { QUERY_KEYS } from "@/utils/query-keys";
 import { createOrganizationSchema } from "@/utils/schemas/organization";
@@ -26,16 +26,6 @@ type CreateOrgModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
 
 export function CreateOrgModal({ open, onOpenChange }: CreateOrgModalProps) {
   const router = useRouter();
@@ -75,12 +65,14 @@ export function CreateOrgModal({ open, onOpenChange }: CreateOrgModalProps) {
 
         await setLastVisitedOrganization(data.slug);
 
-        await queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.AUTH.organizations,
-        });
-        await queryClient.invalidateQueries({
-          queryKey: QUERY_KEYS.AUTH.activeOrganization,
-        });
+        await Promise.allSettled([
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.AUTH.organizations,
+          }),
+          queryClient.invalidateQueries({
+            queryKey: QUERY_KEYS.AUTH.activeOrganization,
+          }),
+        ]);
 
         toast.success("Organization created successfully");
 
