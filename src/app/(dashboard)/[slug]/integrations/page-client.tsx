@@ -317,10 +317,7 @@ export default function PageClient({
           </p>
         </div>
 
-        <Tabs
-          onValueChange={(value) => setActiveTab(value)}
-          value={activeTab}
-        >
+        <Tabs onValueChange={(value) => setActiveTab(value)} value={activeTab}>
           <TabsList>
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="installed">
@@ -434,7 +431,7 @@ export default function PageClient({
 
           <TabsContent value="installed">
             <div className="space-y-8 pt-4">
-              {isLoading ? (
+              {isLoading && (
                 <div className="grid gap-4">
                   {[1, 2, 3].map((i) => (
                     <Card key={i}>
@@ -453,7 +450,9 @@ export default function PageClient({
                     </Card>
                   ))}
                 </div>
-              ) : integrations && integrations.length > 0 ? (
+              )}
+
+              {!isLoading && integrations && integrations.length > 0 && (
                 <div className="grid gap-4">
                   {integrations.map((integration) => {
                     const config = ALL_INTEGRATIONS.find(
@@ -499,7 +498,9 @@ export default function PageClient({
                     );
                   })}
                 </div>
-              ) : (
+              )}
+
+              {!isLoading && (!integrations || integrations.length === 0) && (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <p className="text-muted-foreground">
                     No integrations installed yet.
