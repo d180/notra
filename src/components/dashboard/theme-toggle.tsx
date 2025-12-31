@@ -8,7 +8,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [mounted, setMounted] = useState(false);
@@ -17,7 +17,7 @@ export function ThemeToggle() {
     setMounted(true);
   }, []);
 
-  const isDark = theme === "dark" || (theme === "system" && resolvedTheme === "dark");
+  const isDark = resolvedTheme === "dark";
 
   function handleToggle() {
     setTheme(isDark ? "light" : "dark");
@@ -56,7 +56,7 @@ export function ThemeToggle() {
       />
       {!isCollapsed && (
         <span className="flex-1 text-left text-sm">
-          Dark Mode
+          {isDark ? "Dark Mode" : "Light Mode"}
         </span>
       )}
     </button>
