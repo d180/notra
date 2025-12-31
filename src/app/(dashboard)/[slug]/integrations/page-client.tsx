@@ -141,6 +141,15 @@ const OUTPUT_SOURCES: readonly IntegrationConfig[] = [
 
 const ALL_INTEGRATIONS = [...INPUT_SOURCES, ...OUTPUT_SOURCES];
 
+const INTEGRATION_CATEGORY_MAP: Record<string, "input" | "output"> = {
+  github: "input",
+  linear: "input",
+  slack: "input",
+  framer: "output",
+  marble: "output",
+  webflow: "output",
+};
+
 function IntegrationCard({
   integration,
   activeCount,
@@ -277,16 +286,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
       }
 
       const result = await response.json();
-      console.log("[Integrations API Response]", result);
       return result as IntegrationsResponse;
     },
     enabled: !!organizationId,
-  });
-
-  console.log("[Integrations Data]", {
-    data,
-    integrations: data?.integrations,
-    count: data?.count,
   });
 
   const integrations = data?.integrations;
@@ -442,44 +444,124 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
           <TabsContent value="installed">
             <div className="space-y-8 pt-4">
-              {isLoading && (
-                <div className="grid gap-4">
-                  {[1, 2, 3].map((i) => (
-                    <InstalledIntegrationCardSkeleton key={i} />
-                  ))}
-                </div>
-              )}
+              {isLoading ? (
+                <>
+                  <section>
+                    <h2 className="mb-4 font-semibold text-lg">Input Sources</h2>
+                    <p className="mb-4 text-muted-foreground text-sm">
+                      Connected services pulling data and updates
+                    </p>
+                    <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {[1, 2].map((i) => (
+                        <InstalledIntegrationCardSkeleton key={i} />
+                      ))}
+                    </div>
+                  </section>
 
-              {!isLoading && integrations && integrations.length > 0 && (
-                <div className="grid gap-4">
-                  {integrations.map((integration) => {
-                    const config = ALL_INTEGRATIONS.find(
-                      (i) => i.id === integration.type
-                    );
+                  <section>
+                    <h2 className="mb-4 font-semibold text-lg">
+                      Output Sources
+                    </h2>
+                    <p className="mb-4 text-muted-foreground text-sm">
+                      Connected services publishing and syncing content
+                    </p>
+                    <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {[1].map((i) => (
+                        <InstalledIntegrationCardSkeleton key={i} />
+                      ))}
+                    </div>
+                  </section>
+                </>
+              ) : (
+                <>
+                  {(() => {
+                    const inputIntegrations =
+                      integrations?.filter(
+                        (i) => INTEGRATION_CATEGORY_MAP[i.type] === "input"
+                      ) ?? [];
+                    const outputIntegrations =
+                      integrations?.filter(
+                        (i) => INTEGRATION_CATEGORY_MAP[i.type] === "output"
+                      ) ?? [];
+                    const hasAnyIntegrations =
+                      inputIntegrations.length > 0 ||
+                      outputIntegrations.length > 0;
+
+                    if (!hasAnyIntegrations) {
+                      return (
+                        <div className="flex flex-col items-center justify-center py-12 text-center">
+                          <p className="text-muted-foreground">
+                            No integrations installed yet.
+                          </p>
+                          <p className="text-muted-foreground text-sm">
+                            Switch to the "All" tab to browse and connect
+                            integrations.
+                          </p>
+                        </div>
+                      );
+                    }
 
                     return (
-                      <InstalledIntegrationCard
-                        icon={config?.icon}
-                        integration={integration}
-                        key={integration.id}
-                        onUpdate={() => refetch()}
-                        organizationId={organizationId}
-                        organizationSlug={organizationSlug}
-                      />
-                    );
-                  })}
-                </div>
-              )}
+                      <>
+                        {inputIntegrations.length > 0 && (
+                          <section>
+                            <h2 className="mb-4 font-semibold text-lg">
+                              Input Sources
+                            </h2>
+                            <p className="mb-4 text-muted-foreground text-sm">
+                              Connected services pulling data and updates
+                            </p>
+                            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+                              {inputIntegrations.map((integration) => {
+                                const config = ALL_INTEGRATIONS.find(
+                                  (i) => i.id === integration.type
+                                );
+                                return (
+                                  <InstalledIntegrationCard
+                                    icon={config?.icon}
+                                    integration={integration}
+                                    key={integration.id}
+                                    onUpdate={() => refetch()}
+                                    organizationId={organizationId}
+                                    organizationSlug={organizationSlug}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </section>
+                        )}
 
-              {!isLoading && (!integrations || integrations.length === 0) && (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="text-muted-foreground">
-                    No integrations installed yet.
-                  </p>
-                  <p className="text-muted-foreground text-sm">
-                    Switch to the "All" tab to browse and connect integrations.
-                  </p>
-                </div>
+                        {outputIntegrations.length > 0 && (
+                          <section>
+                            <h2 className="mb-4 font-semibold text-lg">
+                              Output Sources
+                            </h2>
+                            <p className="mb-4 text-muted-foreground text-sm">
+                              Connected services publishing and syncing content
+                            </p>
+                            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+                              {outputIntegrations.map((integration) => {
+                                const config = ALL_INTEGRATIONS.find(
+                                  (i) => i.id === integration.type
+                                );
+                                return (
+                                  <InstalledIntegrationCard
+                                    icon={config?.icon}
+                                    integration={integration}
+                                    key={integration.id}
+                                    onUpdate={() => refetch()}
+                                    organizationId={organizationId}
+                                    organizationSlug={organizationSlug}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </section>
+                        )}
+                      </>
+                    );
+                  })()}
+                </>
               )}
             </div>
           </TabsContent>

@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardAction,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -137,33 +136,36 @@ export function InstalledIntegrationCard({
     );
   };
 
+  const repositoryCount = integration.repositories.length;
+  const repositoryText =
+    repositoryCount === 0
+      ? "No repositories"
+      : `${repositoryCount} ${repositoryCount === 1 ? "repository" : "repositories"}`;
+
   return (
     <Card
       className="cursor-pointer transition-colors hover:bg-accent/50"
       onClick={handleCardClick}
     >
-      <CardHeader>
-        {icon ? (
-          <div className="flex size-9 shrink-0 items-center justify-center text-muted-foreground sm:size-10 [&_svg]:size-7 sm:[&_svg]:size-8">
-            {icon}
+      <CardHeader className="gap-3">
+        <div className="flex items-start gap-3 sm:gap-4">
+          {icon ? (
+            <div className="flex size-9 shrink-0 items-center justify-center text-muted-foreground sm:size-10 [&_svg]:size-7 sm:[&_svg]:size-8">
+              {icon}
+            </div>
+          ) : null}
+          <div className="min-w-0 flex-1 space-y-1">
+            <CardTitle className="text-sm sm:text-base">
+              {integration.displayName}
+            </CardTitle>
+            <CardDescription className="line-clamp-2 text-xs sm:text-sm">
+              {repositoryText}
+            </CardDescription>
           </div>
-        ) : null}
-        <CardTitle>{integration.displayName}</CardTitle>
-        <CardDescription>
-          {integration.createdByUser ? (
-            <>
-              Added by {integration.createdByUser.name} on{" "}
-              {new Date(integration.createdAt).toLocaleDateString()}
-            </>
-          ) : (
-            <>
-              Created on {new Date(integration.createdAt).toLocaleDateString()}
-            </>
-          )}
-        </CardDescription>
-        <CardAction>
+        </div>
+        <CardAction className="row-span-1 self-center sm:row-span-2 sm:self-start">
           <div
-            className="flex items-center gap-2"
+            className="flex items-center gap-1.5 sm:gap-2"
             onClick={(e) => e.stopPropagation()}
           >
             <Badge variant={integration.enabled ? "default" : "secondary"}>
@@ -206,18 +208,6 @@ export function InstalledIntegrationCard({
           </div>
         </CardAction>
       </CardHeader>
-      <CardContent>
-        <div className="text-muted-foreground text-sm">
-          {integration.repositories.length === 0 ? (
-            <p>No repositories configured</p>
-          ) : (
-            <p>
-              {integration.repositories.length} repository
-              {integration.repositories.length !== 1 ? "ies" : ""} configured
-            </p>
-          )}
-        </div>
-      </CardContent>
     </Card>
   );
 }
@@ -225,22 +215,21 @@ export function InstalledIntegrationCard({
 export function InstalledIntegrationCardSkeleton() {
   return (
     <Card>
-      <CardHeader>
-        <Skeleton className="size-9 shrink-0 rounded-md sm:size-10" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-5 w-32 sm:h-6 sm:w-40" />
-          <Skeleton className="h-4 w-48 sm:w-56" />
+      <CardHeader className="gap-3">
+        <div className="flex items-start gap-3 sm:gap-4">
+          <Skeleton className="size-9 shrink-0 rounded-md sm:size-10" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-4 w-20 sm:h-5 sm:w-24" />
+            <Skeleton className="h-3 w-full sm:h-4" />
+          </div>
         </div>
-        <CardAction>
-          <div className="flex items-center gap-2">
+        <CardAction className="row-span-1 self-center sm:row-span-2 sm:self-start">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <Skeleton className="h-5 w-16 rounded-full" />
             <Skeleton className="size-8 rounded-md" />
           </div>
         </CardAction>
       </CardHeader>
-      <CardContent>
-        <Skeleton className="h-4 w-36" />
-      </CardContent>
     </Card>
   );
 }
