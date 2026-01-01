@@ -1,4 +1,7 @@
-import { ContentCard, type ContentType } from "@/components/content/content-card";
+import {
+  ContentCard,
+  type ContentType,
+} from "@/components/content/content-card";
 
 interface PageClientProps {
   organizationSlug: string;

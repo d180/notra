@@ -475,95 +475,93 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                   </section>
                 </>
               ) : (
-                <>
-                  {(() => {
-                    const inputIntegrations =
-                      integrations?.filter(
-                        (i) => INTEGRATION_CATEGORY_MAP[i.type] === "input"
-                      ) ?? [];
-                    const outputIntegrations =
-                      integrations?.filter(
-                        (i) => INTEGRATION_CATEGORY_MAP[i.type] === "output"
-                      ) ?? [];
-                    const hasAnyIntegrations =
-                      inputIntegrations.length > 0 ||
-                      outputIntegrations.length > 0;
+                (() => {
+                  const inputIntegrations =
+                    integrations?.filter(
+                      (i) => INTEGRATION_CATEGORY_MAP[i.type] === "input"
+                    ) ?? [];
+                  const outputIntegrations =
+                    integrations?.filter(
+                      (i) => INTEGRATION_CATEGORY_MAP[i.type] === "output"
+                    ) ?? [];
+                  const hasAnyIntegrations =
+                    inputIntegrations.length > 0 ||
+                    outputIntegrations.length > 0;
 
-                    if (!hasAnyIntegrations) {
-                      return (
-                        <div className="flex flex-col items-center justify-center py-12 text-center">
-                          <p className="text-muted-foreground">
-                            No integrations installed yet.
-                          </p>
-                          <p className="text-muted-foreground text-sm">
-                            Switch to the "All" tab to browse and connect
-                            integrations.
-                          </p>
-                        </div>
-                      );
-                    }
-
+                  if (!hasAnyIntegrations) {
                     return (
-                      <>
-                        {inputIntegrations.length > 0 && (
-                          <section>
-                            <h2 className="mb-4 font-semibold text-lg">
-                              Input Sources
-                            </h2>
-                            <p className="mb-4 text-muted-foreground text-sm">
-                              Connected services pulling data and updates
-                            </p>
-                            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
-                              {inputIntegrations.map((integration) => {
-                                const config = ALL_INTEGRATIONS.find(
-                                  (i) => i.id === integration.type
-                                );
-                                return (
-                                  <InstalledIntegrationCard
-                                    icon={config?.icon}
-                                    integration={integration}
-                                    key={integration.id}
-                                    onUpdate={() => refetch()}
-                                    organizationId={organizationId}
-                                    organizationSlug={organizationSlug}
-                                  />
-                                );
-                              })}
-                            </div>
-                          </section>
-                        )}
-
-                        {outputIntegrations.length > 0 && (
-                          <section>
-                            <h2 className="mb-4 font-semibold text-lg">
-                              Output Sources
-                            </h2>
-                            <p className="mb-4 text-muted-foreground text-sm">
-                              Connected services publishing and syncing content
-                            </p>
-                            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
-                              {outputIntegrations.map((integration) => {
-                                const config = ALL_INTEGRATIONS.find(
-                                  (i) => i.id === integration.type
-                                );
-                                return (
-                                  <InstalledIntegrationCard
-                                    icon={config?.icon}
-                                    integration={integration}
-                                    key={integration.id}
-                                    onUpdate={() => refetch()}
-                                    organizationId={organizationId}
-                                    organizationSlug={organizationSlug}
-                                  />
-                                );
-                              })}
-                            </div>
-                          </section>
-                        )}
-                      </>
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <p className="text-muted-foreground">
+                          No integrations installed yet.
+                        </p>
+                        <p className="text-muted-foreground text-sm">
+                          Switch to the "All" tab to browse and connect
+                          integrations.
+                        </p>
+                      </div>
                     );
-                  })()}
-                </>
+                  }
+
+                  return (
+                    <>
+                      {inputIntegrations.length > 0 && (
+                        <section>
+                          <h2 className="mb-4 font-semibold text-lg">
+                            Input Sources
+                          </h2>
+                          <p className="mb-4 text-muted-foreground text-sm">
+                            Connected services pulling data and updates
+                          </p>
+                          <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {inputIntegrations.map((integration) => {
+                              const config = ALL_INTEGRATIONS.find(
+                                (i) => i.id === integration.type
+                              );
+                              return (
+                                <InstalledIntegrationCard
+                                  icon={config?.icon}
+                                  integration={integration}
+                                  key={integration.id}
+                                  onUpdate={() => refetch()}
+                                  organizationId={organizationId}
+                                  organizationSlug={organizationSlug}
+                                />
+                              );
+                            })}
+                          </div>
+                        </section>
+                      )}
+
+                      {outputIntegrations.length > 0 && (
+                        <section>
+                          <h2 className="mb-4 font-semibold text-lg">
+                            Output Sources
+                          </h2>
+                          <p className="mb-4 text-muted-foreground text-sm">
+                            Connected services publishing and syncing content
+                          </p>
+                          <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3">
+                            {outputIntegrations.map((integration) => {
+                              const config = ALL_INTEGRATIONS.find(
+                                (i) => i.id === integration.type
+                              );
+                              return (
+                                <InstalledIntegrationCard
+                                  icon={config?.icon}
+                                  integration={integration}
+                                  key={integration.id}
+                                  onUpdate={() => refetch()}
+                                  organizationId={organizationId}
+                                  organizationSlug={organizationSlug}
+                                />
+                              );
+                            })}
+                          </div>
+                        </section>
+                      )}
+                    </>
+                  );
+                })()
               )}
             </div>
           </TabsContent>

@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { AiChatSidebar } from "@/components/content/ai-chat-sidebar";
 import {
-  type ContentType,
   CONTENT_TYPE_LABELS,
+  type ContentType,
 } from "@/components/content/content-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

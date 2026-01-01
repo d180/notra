@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getLastActiveOrganization, getSession } from "@/actions/auth";
+import { getLastActiveOrganization, getSession } from "@/lib/auth/actions";
 
 export default async function AuthLayout({
   children,

@@ -22,7 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { QUERY_KEYS } from "@/utils/query-keys";
 
-export type InstalledIntegration = {
+export interface InstalledIntegration {
   id: string;
   displayName: string;
   type: string;
@@ -40,15 +40,15 @@ export type InstalledIntegration = {
     repo: string;
     enabled: boolean;
   }>;
-};
+}
 
-export type InstalledIntegrationCardProps = {
+export interface InstalledIntegrationCardProps {
   integration: InstalledIntegration;
   organizationId: string;
   organizationSlug: string;
   icon?: React.ReactNode;
   onUpdate?: () => void;
-};
+}
 
 export function InstalledIntegrationCard({
   integration,

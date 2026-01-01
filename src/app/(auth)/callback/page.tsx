@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getLastActiveOrganization, getSession } from "@/actions/auth";
+import { getLastActiveOrganization, getSession } from "@/lib/auth/actions";
 
 export default async function AuthCallback() {
   const session = await getSession();

@@ -1,4 +1,4 @@
-import { validateOrganizationAccess } from "@/actions/auth";
+import { validateOrganizationAccess } from "@/lib/auth/actions";
 
 interface OrganizationLayoutProps {
   children: React.ReactNode;

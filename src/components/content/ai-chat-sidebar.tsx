@@ -1,5 +1,7 @@
 "use client";
 
+import { PaintBoardIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +30,9 @@ export function AiChatSidebar({ contentTitle }: AiChatSidebarProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading) {
+      return;
+    }
 
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
@@ -80,24 +84,7 @@ export function AiChatSidebar({ contentTitle }: AiChatSidebarProps) {
     <Card className="flex h-full flex-col">
       <CardHeader className="border-b">
         <CardTitle className="flex items-center gap-2">
-          <svg
-            className="size-5"
-            fill="none"
-            stroke="currentColor"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <title>AI Chat</title>
-            <path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5" />
-            <path d="M8.5 8.5v.01" />
-            <path d="M16 15.5v.01" />
-            <path d="M12 12v.01" />
-            <path d="M11 17v.01" />
-            <path d="M7 14v.01" />
-          </svg>
+          <HugeiconsIcon icon={PaintBoardIcon} />
           AI Assistant
         </CardTitle>
       </CardHeader>
@@ -105,8 +92,8 @@ export function AiChatSidebar({ contentTitle }: AiChatSidebarProps) {
         <div className="flex-1 space-y-4 overflow-y-auto">
           {messages.map((message) => (
             <div
-              key={message.id}
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+              key={message.id}
             >
               <div
                 className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${
