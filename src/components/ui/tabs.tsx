@@ -2,8 +2,12 @@
 
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 import { cva, type VariantProps } from "class-variance-authority";
+import { motion } from "framer-motion";
+import { createContext, useContext, useEffect, useId, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
+
+const TabsLayoutIdContext = createContext<string | null>(null);
 
 function Tabs({
   className,
@@ -43,29 +47,70 @@ function TabsList({
   variant = "default",
   ...props
 }: TabsPrimitive.List.Props & VariantProps<typeof tabsListVariants>) {
+  const layoutId = useId();
+
   return (
-    <TabsPrimitive.List
-      className={cn(tabsListVariants({ variant }), className)}
-      data-slot="tabs-list"
-      data-variant={variant}
-      {...props}
-    />
+    <TabsLayoutIdContext.Provider value={variant === "line" ? layoutId : null}>
+      <TabsPrimitive.List
+        className={cn(tabsListVariants({ variant }), className)}
+        data-slot="tabs-list"
+        data-variant={variant}
+        {...props}
+      />
+    </TabsLayoutIdContext.Provider>
   );
 }
 
-function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
+function TabsTrigger({
+  className,
+  children,
+  ...props
+}: TabsPrimitive.Tab.Props) {
+  const layoutId = useContext(TabsLayoutIdContext);
+  const ref = useRef<HTMLButtonElement>(null);
+  const [isSelected, setIsSelected] = useState(false);
+
+  useEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+
+    const updateSelected = () => {
+      setIsSelected(element.hasAttribute("data-selected") || element.hasAttribute("data-active"));
+    };
+
+    const observer = new MutationObserver(updateSelected);
+    observer.observe(element, {
+      attributes: true,
+      attributeFilter: ["data-selected", "data-active"],
+    });
+    updateSelected();
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <TabsPrimitive.Tab
       className={cn(
         "cursor-pointer gap-1.5 rounded-md border border-transparent px-1.5 py-0.5 text-sm font-medium group-data-[variant=default]/tabs-list:data-active:shadow-sm group-data-[variant=line]/tabs-list:data-active:shadow-none [&_svg:not([class*='size-'])]:size-4 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring text-foreground/60 hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center whitespace-nowrap transition-all group-data-[orientation=vertical]/tabs:w-full group-data-[orientation=vertical]/tabs:justify-start focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         "group-data-[variant=line]/tabs-list:bg-transparent group-data-[variant=line]/tabs-list:data-active:bg-transparent dark:group-data-[variant=line]/tabs-list:data-active:border-transparent dark:group-data-[variant=line]/tabs-list:data-active:bg-transparent",
         "data-active:bg-background dark:data-active:text-foreground dark:data-active:border-input dark:data-active:bg-input/30 data-active:text-foreground",
-        "after:bg-foreground after:absolute after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
+        !layoutId &&
+          "after:bg-foreground after:absolute after:opacity-0 after:transition-opacity group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:bottom-[-5px] group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-right-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:data-active:after:opacity-100",
         className
       )}
       data-slot="tabs-trigger"
+      ref={ref}
       {...props}
-    />
+    >
+      {children}
+      {layoutId && isSelected && (
+        <motion.span
+          className="absolute inset-x-0 bottom-[-5px] h-0.5 bg-foreground group-data-[orientation=vertical]/tabs:inset-x-auto group-data-[orientation=vertical]/tabs:inset-y-0 group-data-[orientation=vertical]/tabs:-right-1 group-data-[orientation=vertical]/tabs:w-0.5"
+          layoutId={layoutId}
+          transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+        />
+      )}
+    </TabsPrimitive.Tab>
   );
 }
 

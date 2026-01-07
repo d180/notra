@@ -99,7 +99,7 @@ export default function PageClient({
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+        <div className="grid gap-6 lg:grid-cols-[1fr_350px]">
           <Tabs
             className="w-full"
             onValueChange={(value) => setView(value as ViewOption)}
@@ -107,7 +107,7 @@ export default function PageClient({
           >
             <TitleCard
               action={
-                <TabsList>
+                <TabsList variant="line">
                   <TabsTrigger value="rendered">Rendered</TabsTrigger>
                   <TabsTrigger value="markdown">Markdown</TabsTrigger>
                 </TabsList>
@@ -122,7 +122,7 @@ export default function PageClient({
                 />
               </TabsContent>
               <TabsContent className="mt-0" value="markdown">
-                <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap font-mono text-sm">
+                <pre className="whitespace-pre-wrap font-mono text-sm">
                   {content.markdown}
                 </pre>
               </TabsContent>
