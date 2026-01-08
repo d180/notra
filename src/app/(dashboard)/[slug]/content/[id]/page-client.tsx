@@ -61,6 +61,10 @@ export default function PageClient({
   const saveToastIdRef = useRef<string | number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorRef = useRef<EditorRefHandle | null>(null);
+  // biome-ignore lint/suspicious/noEmptyBlockStatements: Initial empty function for ref
+  const handleSaveRef = useRef<() => void>(() => {});
+  // biome-ignore lint/suspicious/noEmptyBlockStatements: Initial empty function for ref
+  const handleDiscardRef = useRef<() => void>(() => {});
 
   // Initialize content when data loads
   useEffect(() => {
@@ -78,12 +82,37 @@ export default function PageClient({
     ? extractTitleFromMarkdown(currentMarkdown)
     : (data?.content?.title ?? "Loading...");
 
-  const handleSave = useCallback(() => {
-    // TODO: Implement save to database
-    if (editedMarkdown) {
-      setOriginalMarkdown(editedMarkdown);
+  const [, setIsSaving] = useState(false);
+
+  const handleSave = useCallback(async () => {
+    if (!editedMarkdown) {
+      return;
     }
-  }, [editedMarkdown]);
+
+    setIsSaving(true);
+    try {
+      const response = await fetch(
+        `/api/organizations/${organizationId}/content/${contentId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ markdown: editedMarkdown }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to save");
+      }
+
+      setOriginalMarkdown(editedMarkdown);
+      toast.success("Content saved");
+    } catch (err) {
+      console.error("Error saving content:", err);
+      toast.error("Failed to save content");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [editedMarkdown, organizationId, contentId]);
 
   const handleDiscard = useCallback(() => {
     setEditedMarkdown(originalMarkdown);
@@ -91,7 +120,13 @@ export default function PageClient({
     editorRef.current?.setMarkdown(originalMarkdown);
   }, [originalMarkdown]);
 
-  // Persistent save toast
+  // Keep refs updated with latest callbacks
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+    handleDiscardRef.current = handleDiscard;
+  }, [handleSave, handleDiscard]);
+
+  // Persistent save toast - only create/dismiss based on hasChanges
   useEffect(() => {
     if (hasChanges && !saveToastIdRef.current) {
       saveToastIdRef.current = toast.custom(
@@ -102,7 +137,7 @@ export default function PageClient({
             </span>
             <Button
               onClick={() => {
-                handleDiscard();
+                handleDiscardRef.current();
                 toast.dismiss(t);
               }}
               size="sm"
@@ -112,7 +147,7 @@ export default function PageClient({
             </Button>
             <Button
               onClick={() => {
-                handleSave();
+                handleSaveRef.current();
                 toast.dismiss(t);
               }}
               size="sm"
@@ -127,7 +162,7 @@ export default function PageClient({
       toast.dismiss(saveToastIdRef.current);
       saveToastIdRef.current = null;
     }
-  }, [hasChanges, handleSave, handleDiscard]);
+  }, [hasChanges]);
 
   // Cleanup toast on unmount
   useEffect(() => {
