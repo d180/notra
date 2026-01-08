@@ -188,6 +188,16 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Force text selection to be visible */
+  ::selection {
+    background-color: oklch(0.6056 0.2189 292.7172 / 0.3);
+    color: inherit;
+  }
+
+  [contenteditable]::selection {
+    background-color: oklch(0.6056 0.2189 292.7172 / 0.4);
+  }
 }
 
 @utility scrollbar-stable {

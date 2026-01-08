@@ -47,8 +47,21 @@ export function AiEditInput({
     }
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Prevent clearing text selection when clicking on the chat input
+    if (selectedText) {
+      e.preventDefault();
+      textareaRef.current?.focus();
+    }
+  };
+
   return (
-    <div className="fixed bottom-6 left-1/2 z-40 w-full max-w-2xl -translate-x-1/2 px-4">
+    // biome-ignore lint/a11y/noNoninteractiveElementInteractions: Intentional to preserve selection
+    // biome-ignore lint/a11y/noStaticElementInteractions: Intentional to preserve selection
+    <div
+      className="fixed bottom-6 left-1/2 z-40 w-full max-w-2xl -translate-x-1/2 px-4"
+      onMouseDown={handleMouseDown}
+    >
       {selectedText && (
         <div className="mb-2 flex items-center gap-2 rounded-lg border border-primary/50 bg-primary/10 px-3 py-2 backdrop-blur">
           <span className="font-medium text-primary text-xs">Selected:</span>

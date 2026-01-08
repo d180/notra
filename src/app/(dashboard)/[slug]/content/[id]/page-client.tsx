@@ -87,7 +87,8 @@ export default function PageClient({
 
   const handleDiscard = useCallback(() => {
     setEditedMarkdown(originalMarkdown);
-    setEditorKey((k) => k + 1); // Force Lexical to remount with original content
+    // Update Lexical editor content directly without remounting
+    editorRef.current?.setMarkdown(originalMarkdown);
   }, [originalMarkdown]);
 
   // Persistent save toast
@@ -146,7 +147,7 @@ export default function PageClient({
     setEditedMarkdown(markdown);
   }, []);
 
-  // Handle Lexical selection - only update if there's actual selected text
+  // Handle Lexical selection
   const handleSelectionChange = useCallback((text: string | null) => {
     if (text && text.length > 0) {
       setSelectedText(text);
@@ -193,7 +194,8 @@ export default function PageClient({
       const responseData = await response.json();
       if (responseData.markdown) {
         setEditedMarkdown(responseData.markdown);
-        setEditorKey((k) => k + 1); // Force Lexical to remount with new content
+        // Update Lexical editor content directly without remounting
+        editorRef.current?.setMarkdown(responseData.markdown);
       }
 
       clearSelection();

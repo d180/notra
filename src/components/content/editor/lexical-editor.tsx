@@ -11,7 +11,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
-import { type RefObject, useCallback, useMemo } from "react";
+import { type RefObject, useCallback, useMemo, useRef } from "react";
 import { editorTheme } from "./editor-theme";
 import {
   type EditorRefHandle,
@@ -35,6 +35,8 @@ export function LexicalEditor({
   editable = true,
   editorRef,
 }: LexicalEditorProps) {
+  const isProgrammaticUpdateRef = useRef(false);
+
   const onError = useCallback((error: Error) => {
     console.error("Lexical error:", error);
   }, []);
@@ -60,19 +62,19 @@ export function LexicalEditor({
     [initialMarkdown, editable, onError]
   );
 
+  // Wrap onChange to skip programmatic updates
+  const handleChange = useCallback(
+    (markdown: string) => {
+      if (!isProgrammaticUpdateRef.current) {
+        onChange(markdown);
+      }
+    },
+    [onChange]
+  );
+
   return (
     <LexicalComposer initialConfig={initialConfig}>
       <div className="lexical-editor relative">
-        <style>
-          {`
-            .lexical-editor ::selection {
-              background: hsl(var(--primary) / 0.3);
-            }
-            .lexical-editor [contenteditable] {
-              caret-color: hsl(var(--primary));
-            }
-          `}
-        </style>
         <RichTextPlugin
           contentEditable={
             <ContentEditable
@@ -85,9 +87,14 @@ export function LexicalEditor({
         />
         <HistoryPlugin />
         {editable && <MarkdownShortcutPlugin transformers={TRANSFORMERS} />}
-        <MarkdownSyncPlugin onChange={onChange} />
+        <MarkdownSyncPlugin onChange={handleChange} />
         <SelectionPlugin onSelectionChange={onSelectionChange} />
-        {editorRef && <EditorRefPlugin editorRef={editorRef} />}
+        {editorRef && (
+          <EditorRefPlugin
+            editorRef={editorRef}
+            isProgrammaticUpdateRef={isProgrammaticUpdateRef}
+          />
+        )}
       </div>
     </LexicalComposer>
   );
