@@ -62,7 +62,17 @@ export function LexicalEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div className="relative">
+      <div className="lexical-editor relative">
+        <style>
+          {`
+            .lexical-editor ::selection {
+              background: hsl(var(--primary) / 0.3);
+            }
+            .lexical-editor [contenteditable] {
+              caret-color: hsl(var(--primary));
+            }
+          `}
+        </style>
         <RichTextPlugin
           contentEditable={
             <ContentEditable

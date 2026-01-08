@@ -1,6 +1,5 @@
 "use client";
 
-import { marked } from "marked";
 import Link from "next/link";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -8,6 +7,8 @@ import { toast } from "sonner";
 import { AiEditInput } from "@/components/content/ai-edit-input";
 import { CONTENT_TYPE_LABELS } from "@/components/content/content-card";
 import { DiffView } from "@/components/content/diff-view";
+import { LexicalEditor } from "@/components/content/editor/lexical-editor";
+import type { EditorRefHandle } from "@/components/content/editor/plugins/editor-ref-plugin";
 import { TitleCard } from "@/components/title-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,36 +52,42 @@ export default function PageClient({
 
   const { data, isLoading, error } = useContent(organizationId, contentId);
 
-  const [editedMarkdown, setEditedMarkdown] = useState("");
+  const [editedMarkdown, setEditedMarkdown] = useState<string | null>(null);
   const [originalMarkdown, setOriginalMarkdown] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [selectedText, setSelectedText] = useState<string | null>(null);
+  const [editorKey, setEditorKey] = useState(0);
 
   const saveToastIdRef = useRef<string | number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const renderedRef = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<EditorRefHandle | null>(null);
 
+  // Initialize content when data loads
   useEffect(() => {
-    if (data?.content) {
+    if (data?.content && editedMarkdown === null) {
       setEditedMarkdown(data.content.markdown);
       setOriginalMarkdown(data.content.markdown);
+      setEditorKey((k) => k + 1); // Force Lexical to remount with new content
     }
-  }, [data]);
+  }, [data, editedMarkdown]);
 
-  const hasChanges = editedMarkdown !== originalMarkdown;
-  const title = editedMarkdown
-    ? extractTitleFromMarkdown(editedMarkdown)
+  const currentMarkdown = editedMarkdown ?? data?.content?.markdown ?? "";
+  const hasChanges =
+    editedMarkdown !== null && editedMarkdown !== originalMarkdown;
+  const title = currentMarkdown
+    ? extractTitleFromMarkdown(currentMarkdown)
     : (data?.content?.title ?? "Loading...");
-
-  const renderedHtml = editedMarkdown ? marked.parse(editedMarkdown) : "";
 
   const handleSave = useCallback(() => {
     // TODO: Implement save to database
-    setOriginalMarkdown(editedMarkdown);
+    if (editedMarkdown) {
+      setOriginalMarkdown(editedMarkdown);
+    }
   }, [editedMarkdown]);
 
   const handleDiscard = useCallback(() => {
     setEditedMarkdown(originalMarkdown);
+    setEditorKey((k) => k + 1); // Force Lexical to remount with original content
   }, [originalMarkdown]);
 
   // Persistent save toast
@@ -134,14 +141,14 @@ export default function PageClient({
     setSelectedText(null);
   }, []);
 
-  // Handle selection in rendered view
-  const handleRenderedMouseUp = useCallback(() => {
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed) {
-      return;
-    }
-    const text = selection.toString().trim();
-    if (text) {
+  // Handle Lexical editor changes
+  const handleEditorChange = useCallback((markdown: string) => {
+    setEditedMarkdown(markdown);
+  }, []);
+
+  // Handle Lexical selection - only update if there's actual selected text
+  const handleSelectionChange = useCallback((text: string | null) => {
+    if (text && text.length > 0) {
       setSelectedText(text);
     }
   }, []);
@@ -173,7 +180,7 @@ export default function PageClient({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             instruction,
-            currentMarkdown: editedMarkdown,
+            currentMarkdown,
             selectedText,
           }),
         }
@@ -186,6 +193,7 @@ export default function PageClient({
       const responseData = await response.json();
       if (responseData.markdown) {
         setEditedMarkdown(responseData.markdown);
+        setEditorKey((k) => k + 1); // Force Lexical to remount with new content
       }
 
       clearSelection();
@@ -292,16 +300,19 @@ export default function PageClient({
             }
             heading={title}
           >
-            <TabsContent className="mt-0" value="rendered">
-              {/* biome-ignore lint/a11y/noStaticElementInteractions: selection handler */}
-              <div
-                className="prose prose-neutral dark:prose-invert max-w-none selection:bg-primary/30"
-                dangerouslySetInnerHTML={{
-                  __html: typeof renderedHtml === "string" ? renderedHtml : "",
-                }}
-                onMouseUp={handleRenderedMouseUp}
-                ref={renderedRef}
-              />
+            <TabsContent
+              className="prose prose-neutral dark:prose-invert mt-0 max-w-none"
+              value="rendered"
+            >
+              {currentMarkdown && (
+                <LexicalEditor
+                  editorRef={editorRef}
+                  initialMarkdown={currentMarkdown}
+                  key={editorKey}
+                  onChange={handleEditorChange}
+                  onSelectionChange={handleSelectionChange}
+                />
+              )}
             </TabsContent>
             <TabsContent className="mt-0" value="markdown">
               <textarea
@@ -310,12 +321,12 @@ export default function PageClient({
                 onMouseUp={handleTextareaSelect}
                 onSelect={handleTextareaSelect}
                 ref={textareaRef}
-                value={editedMarkdown}
+                value={currentMarkdown}
               />
             </TabsContent>
             <TabsContent className="mt-0" value="diff">
               <DiffView
-                currentMarkdown={editedMarkdown}
+                currentMarkdown={currentMarkdown}
                 originalMarkdown={originalMarkdown}
               />
             </TabsContent>
