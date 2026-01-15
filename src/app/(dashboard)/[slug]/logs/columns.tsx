@@ -29,7 +29,7 @@ const columnHelper = createColumnHelper<Log>();
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -116,15 +116,15 @@ export const columns = [
       const label = info.getValue();
       const code = info.row.original.statusCode;
       const status = { label, code } as StatusWithCode;
-      return (
+      return status.code !== null ? (
         <Tooltip>
           <TooltipTrigger>
             <StatusBadge status={status} />
           </TooltipTrigger>
-          <TooltipContent>
-            {status.code !== null ? `Status code: ${status.code}` : "Pending"}
-          </TooltipContent>
+          <TooltipContent>{`Status code: ${status.code}`}</TooltipContent>
         </Tooltip>
+      ) : (
+        <StatusBadge status={status} />
       );
     },
   }),
