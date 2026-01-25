@@ -12,6 +12,8 @@ export const QUERY_KEYS = {
       ["integrations", integrationId, "repositories"] as const,
     availableRepos: (integrationId: string) =>
       ["integrations", integrationId, "available-repos"] as const,
+    webhookConfig: (repositoryId: string) =>
+      ["integrations", "webhook", repositoryId] as const,
   },
   BRAND: {
     settings: (organizationId: string) =>
@@ -23,6 +25,16 @@ export const QUERY_KEYS = {
     base: ["webhook-logs"] as const,
     list: (organizationId: string, page: number) =>
       ["webhook-logs", organizationId, page] as const,
+  },
+  TRIGGERS: {
+    base: ["triggers"] as const,
+    list: (organizationId: string) => ["triggers", organizationId] as const,
+  },
+  AUTOMATION: {
+    events: (organizationId: string) =>
+      ["automation", "events", organizationId] as const,
+    schedules: (organizationId: string) =>
+      ["automation", "schedules", organizationId] as const,
   },
   CONTENT: {
     base: ["content"] as const,

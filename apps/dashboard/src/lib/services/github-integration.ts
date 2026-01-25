@@ -1,6 +1,4 @@
-import { and, eq } from "drizzle-orm";
-import { customAlphabet } from "nanoid";
-import { decryptToken, encryptToken } from "@/lib/crypto/token-encryption";
+import crypto from "node:crypto";
 import { db } from "@notra/db/drizzle";
 import {
   githubIntegrations,
@@ -8,10 +6,18 @@ import {
   members,
   repositoryOutputs,
 } from "@notra/db/schema";
+
+import { and, eq } from "drizzle-orm";
+import { customAlphabet } from "nanoid";
+import { decryptToken, encryptToken } from "@/lib/crypto/token-encryption";
 import type { OutputContentType } from "@/utils/schemas/integrations";
 import { createOctokit } from "../octokit";
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 16);
+
+function generateWebhookSecret(): string {
+  return crypto.randomBytes(32).toString("hex");
+}
 
 interface CreateGitHubIntegrationParams {
   organizationId: string;
@@ -106,8 +112,12 @@ export async function createGitHubIntegration(
     .returning();
 
   if (!integration) {
-    throw new Error("Failed to create GitHub integration");
+    throw new Error("Failed to create integration");
   }
+
+  // Generate webhook secret upfront so it's ready immediately
+  const webhookSecret = generateWebhookSecret();
+  const encryptedWebhookSecret = encryptToken(webhookSecret);
 
   const [repository] = await db
     .insert(githubRepositories)
@@ -117,11 +127,12 @@ export async function createGitHubIntegration(
       owner,
       repo,
       enabled: true,
+      encryptedWebhookSecret,
     })
     .returning();
 
   if (!repository) {
-    throw new Error("Failed to create GitHub repository entry");
+    throw new Error("Failed to create repository");
   }
 
   await db.insert(repositoryOutputs).values([
@@ -244,6 +255,22 @@ export async function addRepository(
     throw new Error("User does not have access to this integration");
   }
 
+  const existingRepository = await db.query.githubRepositories.findFirst({
+    where: and(
+      eq(githubRepositories.integrationId, integrationId),
+      eq(githubRepositories.owner, owner),
+      eq(githubRepositories.repo, repo),
+    ),
+  });
+
+  if (existingRepository) {
+    throw new Error("Repository already connected");
+  }
+
+  // Generate webhook secret upfront so it's ready immediately
+  const webhookSecret = generateWebhookSecret();
+  const encryptedWebhookSecret = encryptToken(webhookSecret);
+
   const [repository] = await db
     .insert(githubRepositories)
     .values({
@@ -252,11 +279,12 @@ export async function addRepository(
       owner,
       repo,
       enabled: true,
+      encryptedWebhookSecret,
     })
     .returning();
 
   if (!repository) {
-    throw new Error("Failed to create GitHub repository entry");
+    throw new Error("Failed to create repository");
   }
 
   if (outputs.length > 0) {
@@ -456,4 +484,136 @@ export async function getTokenForIntegrationId(
   }
 
   return decryptToken(integration.encryptedToken);
+}
+
+export interface WebhookConfig {
+  webhookUrl: string;
+  webhookSecret: string;
+  repositoryId: string;
+  owner: string;
+  repo: string;
+}
+
+export async function generateWebhookSecretForRepository(
+  repositoryId: string,
+  userId: string,
+): Promise<WebhookConfig> {
+  const repository = await getRepositoryById(repositoryId);
+
+  if (!repository) {
+    throw new Error("Repository not found");
+  }
+
+  const hasAccess = await validateUserOrgAccess(
+    userId,
+    repository.integration.organizationId,
+  );
+
+  if (!hasAccess) {
+    throw new Error("User does not have access to this repository");
+  }
+
+  const secret = generateWebhookSecret();
+  const encryptedSecret = encryptToken(secret);
+
+  await db
+    .update(githubRepositories)
+    .set({ encryptedWebhookSecret: encryptedSecret })
+    .where(eq(githubRepositories.id, repositoryId));
+
+  const webhookUrl = buildWebhookUrl(
+    repository.integration.id,
+    repository.integration.organizationId,
+    repositoryId,
+  );
+
+  return {
+    webhookUrl,
+    webhookSecret: secret,
+    repositoryId,
+    owner: repository.owner,
+    repo: repository.repo,
+  };
+}
+
+export async function getWebhookConfigForRepository(
+  repositoryId: string,
+  userId: string,
+): Promise<WebhookConfig | null> {
+  const repository = await getRepositoryById(repositoryId);
+
+  if (!repository) {
+    throw new Error("Repository not found");
+  }
+
+  const hasAccess = await validateUserOrgAccess(
+    userId,
+    repository.integration.organizationId,
+  );
+
+  if (!hasAccess) {
+    throw new Error("User does not have access to this repository");
+  }
+
+  if (!repository.encryptedWebhookSecret) {
+    return null;
+  }
+
+  const webhookSecret = decryptToken(repository.encryptedWebhookSecret);
+  const webhookUrl = buildWebhookUrl(
+    repository.integration.id,
+    repository.integration.organizationId,
+    repositoryId,
+  );
+
+  return {
+    webhookUrl,
+    webhookSecret,
+    repositoryId,
+    owner: repository.owner,
+    repo: repository.repo,
+  };
+}
+
+export async function hasWebhookConfigured(
+  repositoryId: string,
+): Promise<boolean> {
+  const repository = await db.query.githubRepositories.findFirst({
+    where: eq(githubRepositories.id, repositoryId),
+    columns: {
+      encryptedWebhookSecret: true,
+    },
+  });
+
+  return !!repository?.encryptedWebhookSecret;
+}
+
+export async function getWebhookSecretByRepositoryId(
+  repositoryId: string,
+): Promise<string | null> {
+  const repository = await db.query.githubRepositories.findFirst({
+    where: eq(githubRepositories.id, repositoryId),
+    columns: {
+      encryptedWebhookSecret: true,
+    },
+  });
+
+  if (!repository?.encryptedWebhookSecret) {
+    return null;
+  }
+
+  return decryptToken(repository.encryptedWebhookSecret);
+}
+
+function buildWebhookUrl(
+  integrationId: string,
+  organizationId: string,
+  repositoryId: string,
+): string {
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : "http://localhost:3000");
+  return `${baseUrl}/api/webhooks/github/${organizationId}/${integrationId}/${repositoryId}`;
 }

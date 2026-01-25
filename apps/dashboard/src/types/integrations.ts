@@ -12,10 +12,37 @@ export interface GitHubRepository {
   owner: string;
   repo: string;
   enabled: boolean;
+  hasWebhook?: boolean;
   outputs?: RepositoryOutput[];
 }
 
 export type Repository = GitHubRepository;
+
+export interface GitHubIntegration {
+  id: string;
+  displayName: string;
+  enabled: boolean;
+  createdAt: string;
+  createdByUser?: {
+    id: string;
+    name: string;
+    email: string;
+    image: string | null;
+  };
+  repositories: GitHubRepository[];
+}
+
+export type WebhookLogType = "release" | "push" | "star" | "ping";
+
+export interface IntegrationWebhookLog {
+  id: string;
+  type: WebhookLogType;
+  action: string;
+  status: "success" | "failed";
+  message?: string;
+  payload?: Record<string, unknown>;
+  createdAt: string;
+}
 
 export interface GitHubIntegration {
   id: string;
@@ -83,4 +110,22 @@ export interface IntegrationCardProps {
 export interface RepositoryListProps {
   integrationId: string;
   organizationId: string;
+}
+
+export interface WebhookConfig {
+  webhookUrl: string;
+  webhookSecret: string;
+  repositoryId: string;
+  owner: string;
+  repo: string;
+}
+
+export interface WebhookSetupDialogProps {
+  repositoryId: string;
+  organizationId: string;
+  owner: string;
+  repo: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
 }
