@@ -241,7 +241,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
         </div>
 
         <Tabs onValueChange={(value) => setActiveTab(value)} value={activeTab}>
-          <TabsList>
+          <TabsList variant="line">
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="installed">
               Installed{installedCount > 0 ? ` (${installedCount})` : ""}

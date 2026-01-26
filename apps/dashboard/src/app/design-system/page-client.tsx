@@ -127,7 +127,6 @@ import {
 import { Label } from "@notra/ui/components/ui/label";
 import {
   Progress,
-  ProgressIndicator,
   ProgressLabel,
   ProgressTrack,
   ProgressValue,
@@ -894,7 +893,7 @@ export default function DesignSystemClientPage() {
             <CardContent>
               <div className="space-y-5">
                 <Tabs defaultValue="overview">
-                  <TabsList>
+                  <TabsList variant="line">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="activity">Activity</TabsTrigger>
                     <TabsTrigger value="settings">Settings</TabsTrigger>

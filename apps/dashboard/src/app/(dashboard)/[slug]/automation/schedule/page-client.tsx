@@ -262,7 +262,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 							setActiveTab(value as "active" | "paused")
 						}
 					>
-						<TabsList>
+						<TabsList variant="line">
 							<TabsTrigger value="active">
 								Active ({activeCounts.active})
 							</TabsTrigger>
