@@ -2,6 +2,7 @@ import { db } from "@notra/db/drizzle";
 import { members } from "@notra/db/schema";
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import * as z from "zod";
 import { getServerSession } from "./session";
 
 type User = NonNullable<Awaited<ReturnType<typeof getServerSession>>["user"]>;
@@ -15,6 +16,7 @@ export interface OrganizationContext {
 	};
 }
 
+const organizationIdSchema = z.string().min(1);
 interface OrganizationAuthResult {
 	success: true;
 	context: OrganizationContext;
@@ -36,6 +38,17 @@ export async function withOrganizationAuth(
 			success: false,
 			response: NextResponse.json(
 				{ error: "Database unavailable" },
+				{ status: 503 },
+			),
+		};
+	}
+
+	const safeOrganizationId = organizationIdSchema.parse(organizationId);
+	if (!safeOrganizationId) {
+		return {
+			success: false,
+			response: NextResponse.json(
+				{ error: "Invalid organization ID" },
 				{ status: 503 },
 			),
 		};
