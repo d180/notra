@@ -2,6 +2,9 @@
 
 import { Refresh01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { BrandIdentityPageSkeleton } from "./skeleton";
+import { TitleCard } from "@/components/title-card";
 import { Button } from "@notra/ui/components/ui/button";
 import {
   Card,
@@ -19,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@notra/ui/components/ui/select";
-import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import {
   Stepper,
   StepperIndicator,
@@ -37,8 +39,6 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
-import { useOrganizationsContext } from "@/components/providers/organization-provider";
-import { TitleCard } from "@/components/title-card";
 import type { ToneProfile } from "@/utils/schemas/brand";
 import {
   useAnalyzeBrand,
@@ -643,47 +643,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
   // Show skeleton during initial loading
   if (!organizationId || (isLoadingSettings && !data)) {
-    return (
-      <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
-        <div className="w-full space-y-6 px-4 lg:px-6">
-          <div className="space-y-1">
-            <h1 className="font-bold text-3xl tracking-tight">
-              Brand Identity
-            </h1>
-            <p className="text-muted-foreground">
-              Configure your brand identity and tone of voice
-            </p>
-          </div>
-
-          <div className="space-y-8">
-            <div className="space-y-3 border-b pb-8">
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-10 max-w-sm" />
-            </div>
-            <div className="space-y-3 border-b pb-8">
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-4 w-48" />
-              <Skeleton className="h-10 max-w-sm" />
-            </div>
-            <div className="space-y-3 border-b pb-8">
-              <Skeleton className="h-5 w-36" />
-              <Skeleton className="h-4 w-40" />
-              <Skeleton className="h-40 max-w-xl" />
-            </div>
-            <div className="space-y-3 border-b pb-8">
-              <Skeleton className="h-5 w-28" />
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-10 max-w-xs" />
-            </div>
-            <div className="space-y-3 border-b pb-8">
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-4 w-64" />
-              <Skeleton className="h-32 max-w-xl" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <BrandIdentityPageSkeleton />;
   }
 
   // Show setup modal when no settings or analyzing

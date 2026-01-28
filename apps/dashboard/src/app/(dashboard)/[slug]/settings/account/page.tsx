@@ -7,6 +7,7 @@ import {
   ViewOffSlashIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { AccountPageSkeleton } from "./skeleton";
 import { TitleCard } from "@/components/title-card";
 import {
   Avatar,
@@ -16,7 +17,6 @@ import {
 import { Button } from "@notra/ui/components/ui/button";
 import { Input } from "@notra/ui/components/ui/input";
 import { Label } from "@notra/ui/components/ui/label";
-import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Google } from "@notra/ui/components/ui/svgs/google";
 import { useForm } from "@tanstack/react-form";
@@ -603,24 +603,5 @@ function ConnectedAccountsSection({
         )}
       </div>
     </TitleCard>
-  );
-}
-
-function AccountPageSkeleton() {
-  return (
-    <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
-      <div className="w-full space-y-6 px-4 lg:px-6">
-        <div className="space-y-1">
-          <Skeleton className="h-9 w-32" />
-          <Skeleton className="h-5 w-64" />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Skeleton className="h-64 rounded-[20px]" />
-          <Skeleton className="h-64 rounded-[20px]" />
-          <Skeleton className="h-48 rounded-[20px] lg:col-span-2" />
-        </div>
-      </div>
-    </div>
   );
 }

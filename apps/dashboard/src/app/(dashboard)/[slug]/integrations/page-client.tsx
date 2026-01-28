@@ -2,6 +2,7 @@
 
 import { InstalledIntegrationCard } from "@/components/integrations-card";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { IntegrationsPageSkeleton } from "./skeleton";
 import { TitleCard } from "@/components/title-card";
 import {
   ALL_INTEGRATIONS,
@@ -293,11 +294,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
           <TabsContent value="installed">
             <div className="space-y-8 pt-4">
               {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <p className="text-muted-foreground">
-                    Loading installed integrations...
-                  </p>
-                </div>
+                <IntegrationsPageSkeleton />
               ) : (
                 (() => {
                   const inputIntegrations =

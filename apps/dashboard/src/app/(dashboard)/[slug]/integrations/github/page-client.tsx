@@ -3,7 +3,7 @@
 import { AddIntegrationDialog } from "@/components/integrations/add-integration-dialog";
 import { IntegrationCard } from "@/components/integrations/integration-card";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
-import { Skeleton } from "@notra/ui/components/ui/skeleton";
+import { GitHubIntegrationsPageSkeleton } from "./skeleton";
 import { useQuery } from "@tanstack/react-query";
 import type { GitHubIntegration } from "@/types/integrations";
 import { QUERY_KEYS } from "@/utils/query-keys";
@@ -33,7 +33,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
       }
 
       const res = await fetch(
-        `/api/organizations/${organization.id}/integrations`
+        `/api/organizations/${organization.id}/integrations`,
       );
 
       if (!res.ok) {
@@ -48,7 +48,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
   });
 
   const integrations = response?.integrations.filter(
-    (i) => i.type === "github"
+    (i) => i.type === "github",
   );
 
   return (
@@ -71,12 +71,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
         </div>
 
         <div>
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-32 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-          ) : null}
+          {isLoading ? <GitHubIntegrationsPageSkeleton /> : null}
 
           {!isLoading && (!integrations || integrations.length === 0) ? (
             <div className="rounded-xl border border-dashed p-12 text-center">

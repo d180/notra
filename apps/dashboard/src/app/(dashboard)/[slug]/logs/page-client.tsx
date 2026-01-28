@@ -3,8 +3,8 @@
 import { InformationCircleIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { LogsPageSkeleton } from "./skeleton";
 import { Alert, AlertDescription } from "@notra/ui/components/ui/alert";
-import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { parseAsInteger, useQueryState } from "nuqs";
 import type { LogsResponse } from "@/types/webhook-logs";
@@ -62,7 +62,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
         </Alert>
 
         {organizationId && isLoading ? (
-          <DataSkeleton />
+          <LogsPageSkeleton />
         ) : (
           <DataTable
             columns={columns}
@@ -72,34 +72,6 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
             totalPages={data?.pagination.totalPages ?? 1}
           />
         )}
-      </div>
-    </div>
-  );
-}
-
-export function DataSkeleton() {
-  return (
-    <div className="space-y-3">
-      <div className="overflow-hidden rounded-md border">
-        <div className="p-4">
-          {Array.from({ length: 10 }).map((_, i) => (
-            <div
-              className="flex items-center space-x-4 py-3"
-              key={`skeleton-${
-                // biome-ignore lint/suspicious/noArrayIndexKey: This is static for loading
-                i
-              }`}
-            >
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-5 w-20" />
-              <Skeleton className="h-5 w-16" />
-              <Skeleton className="h-4 w-12" />
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-4 w-28" />
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );
