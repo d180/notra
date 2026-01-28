@@ -70,7 +70,7 @@ export default function PageClient({
   );
 
   const { state: sidebarState } = useSidebar();
-  const { data, isLoading, error } = useContent(organizationId, contentId);
+  const { data, isPending, error } = useContent(organizationId, contentId);
   const { refetch: refetchCustomer } = useCustomer();
 
   const [editedMarkdown, setEditedMarkdown] = useState<string | null>(null);
@@ -406,7 +406,7 @@ export default function PageClient({
     [sendMessage],
   );
 
-  if (isLoading) {
+  if (isPending) {
     return <ContentDetailSkeleton />;
   }
 

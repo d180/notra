@@ -128,7 +128,7 @@ export default function PageClient({ integrationId }: PageClientProps) {
   const { activeOrganization } = useOrganizationsContext();
   const organizationId = activeOrganization?.id;
 
-  const { data: integration, isLoading } = useQuery({
+  const { data: integration, isPending } = useQuery({
     queryKey: QUERY_KEYS.INTEGRATIONS.detail(integrationId),
     queryFn: async () => {
       if (!organizationId) {
@@ -147,7 +147,7 @@ export default function PageClient({ integrationId }: PageClientProps) {
     enabled: !!organizationId,
   });
 
-  if (isLoading) {
+  if (isPending) {
     return <GitHubIntegrationDetailSkeleton />;
   }
 

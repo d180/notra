@@ -23,7 +23,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
   const {
     data: response,
-    isLoading,
+    isPending,
     refetch,
   } = useQuery({
     queryKey: QUERY_KEYS.INTEGRATIONS.all(organization?.id ?? ""),
@@ -71,9 +71,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
         </div>
 
         <div>
-          {isLoading ? <GitHubIntegrationsPageSkeleton /> : null}
+          {isPending ? <GitHubIntegrationsPageSkeleton /> : null}
 
-          {!isLoading && (!integrations || integrations.length === 0) ? (
+          {!isPending && (!integrations || integrations.length === 0) ? (
             <div className="rounded-xl border border-dashed p-12 text-center">
               <h3 className="font-medium text-lg">No integrations yet</h3>
               <p className="text-muted-foreground text-sm">
@@ -82,7 +82,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
             </div>
           ) : null}
 
-          {!isLoading && integrations && integrations.length > 0 ? (
+          {!isPending && integrations && integrations.length > 0 ? (
             <div className="grid gap-4">
               {integrations.map((integration) => (
                 <IntegrationCard

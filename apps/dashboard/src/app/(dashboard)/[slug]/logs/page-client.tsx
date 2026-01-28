@@ -23,7 +23,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
   const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: QUERY_KEYS.WEBHOOK_LOGS.list(organizationId ?? "", page),
     queryFn: async () => {
       if (!organizationId) {
@@ -61,7 +61,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
           </AlertDescription>
         </Alert>
 
-        {organizationId && isLoading ? (
+        {organizationId && isPending ? (
           <LogsPageSkeleton />
         ) : (
           <DataTable

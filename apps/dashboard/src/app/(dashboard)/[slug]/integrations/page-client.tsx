@@ -66,11 +66,11 @@ import { IntegrationType } from "@/utils/schemas/integrations";
 function IntegrationCard({
   integration,
   activeCount,
-  isLoading,
+  isPending,
 }: {
   integration: IntegrationConfig;
   activeCount: number;
-  isLoading?: boolean;
+  isPending?: boolean;
 }) {
   const { activeOrganization } = useOrganizationsContext();
   const organizationId = activeOrganization?.id;
@@ -90,8 +90,8 @@ function IntegrationCard({
       accentColor={integration.accentColor}
       action={
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {isLoading && <Skeleton className="h-5 w-8 rounded-full" />}
-          {!isLoading && isActive && (
+          {isPending && <Skeleton className="h-5 w-8 rounded-full" />}
+          {!isPending && isActive && (
             <Badge className="text-xs" variant="default">
               {activeCount}
             </Badge>
@@ -181,7 +181,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
     parseAsStringLiteral(TAB_VALUES).withDefault("all"),
   );
 
-  const { data, isLoading, refetch } = useQuery<IntegrationsResponse>({
+  const { data, isPending, refetch } = useQuery<IntegrationsResponse>({
     queryKey: QUERY_KEYS.INTEGRATIONS.all(organizationId ?? ""),
     queryFn: async () => {
       if (!organizationId) {
@@ -263,7 +263,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                         integrationsByType?.[integration.id]?.length || 0
                       }
                       integration={integration}
-                      isLoading={isLoading}
+                      isPending={isPending}
                       key={integration.id}
                     />
                   ))}
@@ -282,7 +282,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                         integrationsByType?.[integration.id]?.length || 0
                       }
                       integration={integration}
-                      isLoading={isLoading}
+                      isPending={isPending}
                       key={integration.id}
                     />
                   ))}
@@ -293,7 +293,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
           <TabsContent value="installed">
             <div className="space-y-8 pt-4">
-              {isLoading ? (
+              {isPending ? (
                 <IntegrationsPageSkeleton />
               ) : (
                 (() => {

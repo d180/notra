@@ -78,11 +78,11 @@ function getStepperValue(status: string, currentStep: number): string {
 }
 
 function getModalTitle(
-  isLoadingSettings: boolean,
+  isPendingSettings: boolean,
   isAnalyzing: boolean,
   status: string,
 ): string {
-  if (isLoadingSettings) {
+  if (isPendingSettings) {
     return "Loading...";
   }
   if (isAnalyzing) {
@@ -95,12 +95,12 @@ function getModalTitle(
 }
 
 function getModalDescription(
-  isLoadingSettings: boolean,
+  isPendingSettings: boolean,
   isAnalyzing: boolean,
   status: string,
   error?: string,
 ): string {
-  if (isLoadingSettings) {
+  if (isPendingSettings) {
     return "Checking your brand settings";
   }
   if (isAnalyzing) {
@@ -113,7 +113,7 @@ function getModalDescription(
 }
 
 interface ModalContentProps {
-  isLoadingSettings: boolean;
+  isPendingSettings: boolean;
   isAnalyzing: boolean;
   progress: { status: string; currentStep: number };
   url: string;
@@ -149,7 +149,7 @@ function getStepIconState(
 }
 
 function ModalContent({
-  isLoadingSettings,
+  isPendingSettings,
   isAnalyzing,
   progress,
   url,
@@ -157,7 +157,7 @@ function ModalContent({
   handleAnalyze,
   isPending,
 }: ModalContentProps) {
-  if (isLoadingSettings) {
+  if (isPendingSettings) {
     return (
       <div className="flex justify-center py-4">
         <LoaderCircle className="size-8 animate-spin text-primary" />
@@ -589,7 +589,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
       : orgFromList;
   const organizationId = organization?.id ?? "";
 
-  const { data, isLoading: isLoadingSettings } =
+  const { data, isPending: isPendingSettings } =
     useBrandSettings(organizationId);
   const { progress, startPolling } = useBrandAnalysisProgress(organizationId);
   const analyzeMutation = useAnalyzeBrand(organizationId, startPolling);
@@ -642,7 +642,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
   const hasSettings = !!data?.settings;
 
   // Show skeleton during initial loading
-  if (!organizationId || (isLoadingSettings && !data)) {
+  if (!organizationId || (isPendingSettings && !data)) {
     return <BrandIdentityPageSkeleton />;
   }
 
@@ -692,7 +692,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                   <ModalContent
                     handleAnalyze={handleAnalyze}
                     isAnalyzing={isAnalyzing}
-                    isLoadingSettings={false}
+                    isPendingSettings={false}
                     isPending={analyzeMutation.isPending}
                     progress={effectiveProgress}
                     setUrl={setUrl}

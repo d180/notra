@@ -65,7 +65,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"active" | "paused">("active");
 
-  const { data, isLoading } = useQuery({
+  const { data, isPending } = useQuery({
     queryKey: QUERY_KEYS.AUTOMATION.schedules(organizationId ?? ""),
     queryFn: async () => {
       if (!organizationId) {
@@ -218,7 +218,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
           />
         </div>
 
-        {isLoading ? (
+        {isPending ? (
           <SchedulePageSkeleton />
         ) : scheduleTriggers.length === 0 ? (
           <div className="rounded-2xl border border-dashed p-12 text-center">
