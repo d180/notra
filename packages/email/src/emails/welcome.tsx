@@ -2,58 +2,65 @@ import {
 	Body,
 	Container,
 	Head,
-	Heading,
-	Hr,
 	Html,
-	Img,
+	Link,
 	Preview,
-	Section,
-	Tailwind,
 	Text,
 } from "@react-email/components";
-import { EmailButton } from "../components/button";
-import { EmailFooter } from "../components/footer";
-import { EMAIL_CONFIG } from "../utils/config";
 
 interface WelcomeEmailProps {
-	userEmail: string;
-	baseUrl: string;
+	userEmail?: string;
 }
 
-export const WelcomeEmail = ({ userEmail, baseUrl }: WelcomeEmailProps) => {
-	const previewText = `Welcome to Notra!`;
-	const logoUrl = EMAIL_CONFIG.getLogoUrl();
-
+export const WelcomeEmail = ({
+	userEmail = "user@example.com",
+}: WelcomeEmailProps) => {
 	return (
 		<Html>
 			<Head />
-			<Preview>{previewText}</Preview>
-			<Tailwind>
-				<Body className="mx-auto my-auto bg-white px-2 font-sans">
-					<Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
-						<Section className="mt-[32px]">
-							<Img
-								alt="Notra Logo"
-								className="mx-auto"
-								height="40"
-								src={logoUrl}
-								width="40"
-							/>
-						</Section>
-						<Heading className="my-6 text-center font-medium text-2xl text-black">
-							Welcome to Notra
-						</Heading>
-						<Text className="text-center text-[#737373] text-base leading-relaxed">
-							Thanks for signing up, <strong>{userEmail}</strong>! We're excited
-							to have you on board.
-						</Text>
-						<Section className="my-8 text-center">
-							<EmailButton href={baseUrl}>Go to Dashboard</EmailButton>
-						</Section>
-						<EmailFooter />
-					</Container>
-				</Body>
-			</Tailwind>
+			<Preview>Welcome to Notra - A quick note from the founder</Preview>
+			<Body style={{ fontFamily: "sans-serif", padding: "20px" }}>
+				<Container style={{ maxWidth: "600px" }}>
+					<Text style={{ fontSize: "16px", lineHeight: "1.6", color: "#333" }}>
+						Hey!
+					</Text>
+
+					<Text style={{ fontSize: "16px", lineHeight: "1.6", color: "#333" }}>
+						I'm Dominik, the founder of Notra. I wanted to personally welcome you
+						and say thanks for signing up.
+					</Text>
+
+					<Text style={{ fontSize: "16px", lineHeight: "1.6", color: "#333" }}>
+						I built Notra because I was frustrated with how scattered content
+						creation had become. I hope it helps you as much as it's helped me.
+					</Text>
+
+					<Text style={{ fontSize: "16px", lineHeight: "1.6", color: "#333" }}>
+						If you have any questions, feedback, or just want to chat - reply to
+						this email. I read every single one.
+					</Text>
+
+					<Text style={{ fontSize: "16px", lineHeight: "1.6", color: "#333" }}>
+						Cheers,
+						<br />
+						Dominik
+					</Text>
+
+					<Text
+						style={{
+							fontSize: "14px",
+							lineHeight: "1.6",
+							color: "#666",
+							marginTop: "32px",
+						}}
+					>
+						P.S. You can get started at{" "}
+						<Link href="https://app.usenotra.com" style={{ color: "#0066cc" }}>
+							app.usenotra.com
+						</Link>
+					</Text>
+				</Container>
+			</Body>
 		</Html>
 	);
 };

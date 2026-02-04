@@ -162,10 +162,10 @@ export async function sendWelcomeEmailAction({
 }) {
 	if (!resend && isDevelopment) {
 		return sendDevEmail({
-			from: EMAIL_CONFIG.from,
+			from: "Dominik from Notra <dominik@usenotra.com>",
 			to: userEmail,
-			text: "This is a mock welcome email",
-			subject: "Welcome to Notra!",
+			text: "This is a mock welcome email from the founder",
+			subject: "Welcome to Notra",
 			_mockContext: { type: "welcome", data: { userEmail } },
 		});
 	}

@@ -110,13 +110,12 @@ export async function sendWelcomeEmail(
 	},
 ) {
 	return await resend.emails.send({
-		from: EMAIL_CONFIG.from,
-		replyTo: EMAIL_CONFIG.replyTo,
+		from: "Dominik from Notra <dominik@usenotra.com>",
+		replyTo: "dominik@usenotra.com",
 		to: userEmail,
-		subject: "Welcome to Notra!",
+		subject: "Welcome to Notra",
 		react: WelcomeEmail({
 			userEmail,
-			baseUrl: EMAIL_CONFIG.getAppUrl(),
 		}),
 	});
 }
