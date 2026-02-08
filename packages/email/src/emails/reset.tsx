@@ -32,7 +32,7 @@ export const ResetPasswordEmail = ({
       <Preview>Reset your password</Preview>
       <Tailwind>
         <Body className="mx-auto my-auto bg-white px-2 font-sans">
-          <Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
+          <Container className="mx-auto my-[40px] max-w-[465px] rounded p-[20px]">
             <Section className="mt-[32px]">
               <Img
                 alt="Notra Logo"

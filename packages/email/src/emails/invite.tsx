@@ -40,7 +40,7 @@ export const InviteUserEmail = ({
       <Preview>{previewText}</Preview>
       <Tailwind>
         <Body className="mx-auto my-auto bg-white px-2 font-sans">
-          <Container className="mx-auto my-[40px] max-w-[465px] rounded border border-[#eaeaea] border-solid p-[20px]">
+          <Container className="mx-auto my-[40px] max-w-[465px] rounded p-[20px]">
             <Section className="mt-[32px]">
               <Img
                 alt="Notra Logo"
@@ -57,11 +57,11 @@ export const InviteUserEmail = ({
 
             <Text className="text-center text-[#737373] text-base leading-relaxed">
               <strong>{invitedByUsername}</strong> has invited you to join the{" "}
-              <strong>{organizationName}</strong> workspace on Notra.
+              <strong>{organizationName}</strong> organization on Notra.
             </Text>
 
             <Section className="my-8 text-center">
-              <EmailButton href={inviteLink}>Join workspace</EmailButton>
+              <EmailButton href={inviteLink}>Join organization</EmailButton>
             </Section>
 
             <Text className="text-[14px] text-black leading-[24px]">
