@@ -1,5 +1,7 @@
 "use client";
 
+import { Tick02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
 import { Card } from "@notra/ui/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@notra/ui/components/ui/tabs";
@@ -176,24 +178,11 @@ export default function PricingSection() {
                     className="flex items-center justify-start gap-[13px] self-stretch"
                     key={index}
                   >
-                    <div className="relative flex h-4 w-4 items-center justify-center">
-                      <svg
-                        fill="none"
-                        height="12"
-                        viewBox="0 0 12 12"
-                        width="12"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M10 3L4.5 8.5L2 6"
-                          stroke="#9CA3AF"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="1.5"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1 font-normal font-sans text-[12.5px] text-primary/80 leading-5">
+                    <HugeiconsIcon
+                      className="size-3 text-[#9CA3AF]"
+                      icon={Tick02Icon}
+                    />
+                    <div className="flex-1 font-normal font-sans text-[12.5px] text-foreground/80 leading-5">
                       {feature}
                     </div>
                   </div>
@@ -270,23 +259,10 @@ export default function PricingSection() {
                     className="flex items-center justify-start gap-[13px] self-stretch"
                     key={index}
                   >
-                    <div className="relative flex h-4 w-4 items-center justify-center">
-                      <svg
-                        fill="none"
-                        height="12"
-                        viewBox="0 0 12 12"
-                        width="12"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M10 3L4.5 8.5L2 6"
-                          stroke="#FF8000"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="1.5"
-                        />
-                      </svg>
-                    </div>
+                    <HugeiconsIcon
+                      className="size-3 text-white"
+                      icon={Tick02Icon}
+                    />
                     <div className="flex-1 font-normal font-sans text-[12.5px] text-primary-foreground/95 leading-5">
                       {feature}
                     </div>
@@ -364,24 +340,11 @@ export default function PricingSection() {
                     className="flex items-center justify-start gap-[13px] self-stretch"
                     key={index}
                   >
-                    <div className="relative flex h-4 w-4 items-center justify-center">
-                      <svg
-                        fill="none"
-                        height="12"
-                        viewBox="0 0 12 12"
-                        width="12"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <path
-                          d="M10 3L4.5 8.5L2 6"
-                          stroke="#9CA3AF"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="1.5"
-                        />
-                      </svg>
-                    </div>
-                    <div className="flex-1 font-normal font-sans text-[12.5px] text-primary/80 leading-5">
+                    <HugeiconsIcon
+                      className="size-3 text-[#9CA3AF]"
+                      icon={Tick02Icon}
+                    />
+                    <div className="flex-1 font-normal font-sans text-[12.5px] text-foreground/80 leading-5">
                       {feature}
                     </div>
                   </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -45,27 +47,6 @@ const faqData: FAQItem[] = [
   },
 ];
 
-function ChevronDownIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      fill="none"
-      height="24"
-      viewBox="0 0 24 24"
-      width="24"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="m6 9 6 6 6-6"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="2"
-      />
-    </svg>
-  );
-}
-
 export default function FAQSection() {
   const [openItems, setOpenItems] = useState<number[]>([]);
 
@@ -106,10 +87,11 @@ export default function FAQSection() {
                       {item.question}
                     </div>
                     <div className="flex items-center justify-center">
-                      <ChevronDownIcon
-                        className={`h-6 w-6 text-foreground/60 transition-transform duration-300 ease-in-out ${
+                      <HugeiconsIcon
+                        className={`size-5 text-foreground/60 transition-transform duration-300 ease-in-out ${
                           isOpen ? "rotate-180" : "rotate-0"
                         }`}
+                        icon={ArrowDown01Icon}
                       />
                     </div>
                   </CollapsibleTrigger>

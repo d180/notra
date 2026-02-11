@@ -1,5 +1,7 @@
 "use client";
 
+import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
 import { useEffect, useState } from "react";
 
@@ -115,23 +117,10 @@ export default function TestimonialsSection() {
               size="icon"
               variant="outline"
             >
-              <div className="relative h-6 w-6 overflow-hidden">
-                <svg
-                  fill="none"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M15 18L9 12L15 6"
-                    stroke="#46413E"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                  />
-                </svg>
-              </div>
+              <HugeiconsIcon
+                className="size-5 text-foreground"
+                icon={ArrowLeft01Icon}
+              />
             </Button>
             <Button
               className="h-9 w-9 overflow-hidden rounded-full border border-[rgba(0,0,0,0.15)] bg-transparent p-0 shadow-[0px_1px_2px_rgba(0,0,0,0.08)] transition-colors hover:bg-muted"
@@ -143,23 +132,10 @@ export default function TestimonialsSection() {
               size="icon"
               variant="outline"
             >
-              <div className="relative h-6 w-6 overflow-hidden">
-                <svg
-                  fill="none"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  width="24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    d="M9 18L15 12L9 6"
-                    stroke="#46413E"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                  />
-                </svg>
-              </div>
+              <HugeiconsIcon
+                className="size-5 text-foreground"
+                icon={ArrowRight01Icon}
+              />
             </Button>
           </div>
         </div>

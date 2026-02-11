@@ -108,14 +108,14 @@ export default function LandingPage() {
               <div className="flex w-full max-w-[937px] flex-col items-center justify-center gap-3 sm:gap-4 md:gap-5 lg:w-[937px] lg:gap-6">
                 <div className="flex flex-col items-center justify-center gap-4 self-stretch rounded-[3px] sm:gap-5 md:gap-6 lg:gap-8">
                   <div className="flex w-full max-w-[748.71px] flex-col justify-center px-2 text-center font-normal font-serif text-[24px] text-foreground xs:text-[28px] leading-[1.1] sm:px-4 sm:text-[36px] sm:leading-[1.15] md:px-0 md:text-[52px] md:leading-[1.2] lg:w-[748.71px] lg:text-[80px] lg:leading-24">
-                    Effortless custom contract
+                    Turn your daily work
                     <br />
-                    billing by Notra
+                    into publish-ready content
                   </div>
                   <div className="flex w-full max-w-[506.08px] flex-col justify-center px-2 text-center font-medium font-sans text-foreground/80 text-sm leading-[1.4] sm:px-4 sm:text-lg sm:leading-[1.45] md:px-0 md:text-xl md:leading-[1.5] lg:w-[506.08px] lg:text-lg lg:leading-7">
-                    Streamline your billing process with seamless automation
+                    Notra connects to GitHub, Linear, and Slack to turn
                     <br className="hidden sm:block" />
-                    for every custom contract, tailored by Notra.
+                    merged PRs, closed issues, and conversations into content.
                   </div>
                 </div>
               </div>
@@ -207,18 +207,18 @@ export default function LandingPage() {
 
                 <div className="flex flex-1 flex-col items-stretch justify-center gap-0 px-0 sm:px-2 md:flex-row md:px-0">
                   <FeatureCard
-                    description="Streamline customer subscriptions and billing with automated scheduling tools."
+                    description="Connect GitHub, Linear, and Slack so Notra can follow what your team ships."
                     isActive={activeCard === 0}
                     onClick={() => handleCardClick(0)}
                     progress={activeCard === 0 ? progress : 0}
-                    title="Plan your schedules"
+                    title="Connect your tools"
                   />
                   <FeatureCard
-                    description="Transform your business data into actionable insights with real-time analytics."
+                    description="Notra picks up on merged PRs, closed issues, and key conversations automatically."
                     isActive={activeCard === 1}
                     onClick={() => handleCardClick(1)}
                     progress={activeCard === 1 ? progress : 0}
-                    title="Analytics & insights"
+                    title="Track what matters"
                   />
                   <FeatureCard
                     description="Keep your team aligned with shared dashboards and collaborative workflows."
