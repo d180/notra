@@ -80,7 +80,9 @@ export default function BrandVoicePreview({
                 </label>
                 <Select
                   onValueChange={(value) => {
-                    if (value) setToneProfile(value);
+                    if (value) {
+                      setToneProfile(value);
+                    }
                   }}
                   value={toneProfile}
                 >
