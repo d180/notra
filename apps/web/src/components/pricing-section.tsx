@@ -4,7 +4,6 @@ import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Button } from "@notra/ui/components/ui/button";
 import { Card } from "@notra/ui/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@notra/ui/components/ui/tabs";
 import Link from "next/link";
 import { useState } from "react";
 import { PRICING_PLANS } from "../utils/constants";
@@ -174,25 +173,19 @@ export default function PricingSection() {
         </div>
       </div>
 
-      <Tabs
-        className="relative flex flex-col items-center justify-center gap-0 self-stretch px-6 py-9 md:px-16"
-        onValueChange={(value) => setBillingPeriod(value as BillingPeriod)}
-        value={billingPeriod}
-      >
+      <div className="relative flex flex-col items-center justify-center gap-0 self-stretch px-6 py-9 md:px-16">
         <div className="-translate-x-1/2 absolute top-[63px] left-1/2 z-0 h-0 w-full max-w-[1060px] transform border-primary/12 border-t" />
 
         <div className="relative z-20 flex items-center justify-center overflow-hidden rounded-lg border border-primary/6 bg-background p-3">
-          <TabsList
-            className="relative h-auto gap-[2px] overflow-hidden rounded-[99px] border-[0.5px] border-primary/8 bg-primary/10 p-[2px]"
-            variant="line"
-          >
-            <TabsTrigger
-              className={`relative z-10 h-auto cursor-pointer rounded-[99px] border-transparent px-4 py-1 transition-all duration-300 after:hidden ${
+          <div className="relative flex h-auto gap-[2px] overflow-hidden rounded-[99px] border-[0.5px] border-primary/8 bg-primary/10 p-[2px]">
+            <button
+              className={`relative z-10 cursor-pointer rounded-[99px] px-4 py-1 transition-all duration-300 ${
                 billingPeriod === "monthly"
                   ? "bg-white shadow-[0px_2px_4px_rgba(0,0,0,0.08)]"
-                  : "bg-transparent shadow-none"
+                  : "bg-transparent"
               }`}
-              value="monthly"
+              onClick={() => setBillingPeriod("monthly")}
+              type="button"
             >
               <span
                 className={`font-medium font-sans text-[13px] leading-5 transition-colors duration-300 ${
@@ -203,15 +196,16 @@ export default function PricingSection() {
               >
                 Monthly
               </span>
-            </TabsTrigger>
+            </button>
 
-            <TabsTrigger
-              className={`relative z-10 h-auto cursor-pointer rounded-[99px] border-transparent px-4 py-1 transition-all duration-300 after:hidden ${
+            <button
+              className={`relative z-10 cursor-pointer rounded-[99px] px-4 py-1 transition-all duration-300 ${
                 billingPeriod === "annually"
                   ? "bg-white shadow-[0px_2px_4px_rgba(0,0,0,0.08)]"
-                  : "bg-transparent shadow-none"
+                  : "bg-transparent"
               }`}
-              value="annually"
+              onClick={() => setBillingPeriod("annually")}
+              type="button"
             >
               <span
                 className={`font-medium font-sans text-[13px] leading-5 transition-colors duration-300 ${
@@ -222,15 +216,15 @@ export default function PricingSection() {
               >
                 Annually
               </span>
-            </TabsTrigger>
-          </TabsList>
+            </button>
+          </div>
 
           <div className="absolute top-[5.25px] left-[5px] h-[3px] w-[3px] rounded-[99px] bg-primary/10 shadow-[0px_0px_0.5px_rgba(0,0,0,0.12)]" />
           <div className="absolute top-[5.25px] right-[5px] h-[3px] w-[3px] rounded-[99px] bg-primary/10 shadow-[0px_0px_0.5px_rgba(0,0,0,0.12)]" />
           <div className="absolute bottom-[5.25px] left-[5px] h-[3px] w-[3px] rounded-[99px] bg-primary/10 shadow-[0px_0px_0.5px_rgba(0,0,0,0.12)]" />
           <div className="absolute right-[5px] bottom-[5.25px] h-[3px] w-[3px] rounded-[99px] bg-primary/10 shadow-[0px_0px_0.5px_rgba(0,0,0,0.12)]" />
         </div>
-      </Tabs>
+      </div>
 
       <div className="flex items-center justify-center self-stretch shadow-[inset_0_1px_0_var(--border),inset_0_-1px_0_var(--border)]">
         <div className="flex w-full items-start justify-center">
