@@ -96,61 +96,6 @@ function PricingCard({
   );
 }
 
-function AnimatedPrice({
-  pricing,
-  billingPeriod,
-  variant,
-}: {
-  pricing: { monthly: number; annually: number };
-  billingPeriod: BillingPeriod;
-  variant: "default" | "featured";
-}) {
-  const isFeatured = variant === "featured";
-
-  return (
-    <div className="flex flex-col items-start justify-start gap-1">
-      <div
-        className={`relative flex h-[60px] items-center font-medium font-serif text-5xl leading-[60px] ${
-          isFeatured ? "text-primary-foreground/95" : "text-primary"
-        }`}
-      >
-        <span className="invisible">
-          ${billingPeriod === "annually" ? pricing.annually : pricing.monthly}
-        </span>
-        <span
-          aria-hidden={billingPeriod !== "annually"}
-          className="absolute inset-0 flex items-center transition-all duration-500"
-          style={{
-            opacity: billingPeriod === "annually" ? 1 : 0,
-            transform: `scale(${billingPeriod === "annually" ? 1 : 0.8})`,
-            filter: `blur(${billingPeriod === "annually" ? 0 : 4}px)`,
-          }}
-        >
-          ${pricing.annually}
-        </span>
-        <span
-          aria-hidden={billingPeriod !== "monthly"}
-          className="absolute inset-0 flex items-center transition-all duration-500"
-          style={{
-            opacity: billingPeriod === "monthly" ? 1 : 0,
-            transform: `scale(${billingPeriod === "monthly" ? 1 : 0.8})`,
-            filter: `blur(${billingPeriod === "monthly" ? 0 : 4}px)`,
-          }}
-        >
-          ${pricing.monthly}
-        </span>
-      </div>
-      <div
-        className={`font-medium font-sans text-sm ${
-          isFeatured ? "text-primary-foreground/80" : "text-muted-foreground"
-        }`}
-      >
-        per {billingPeriod === "monthly" ? "month" : "year"}.
-      </div>
-    </div>
-  );
-}
-
 export default function PricingSection() {
   const [billingPeriod, setBillingPeriod] = useState<BillingPeriod>("monthly");
 
@@ -239,80 +184,83 @@ export default function PricingSection() {
             </div>
           </div>
 
-          <div className="flex flex-1 flex-col py-12 md:flex-row md:py-0">
-            <div className="grid flex-1 grid-cols-1 grid-rows-[auto_auto_auto_1fr]">
-              <PricingCard
-                cta={free.cta}
-                description={free.description}
-                features={free.features}
-                name={free.name}
-                price={
-                  <AnimatedPrice
-                    billingPeriod={billingPeriod}
-                    pricing={free.pricing}
-                    variant="default"
-                  />
-                }
-              />
-            </div>
-
-            <div className="relative hidden w-6 self-stretch overflow-hidden md:block lg:w-8">
-              <div className="-top-30 -left-12.5 absolute flex w-35 flex-col items-start justify-start">
-                {Array.from({ length: 200 }).map((_, i) => (
-                  <div
-                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
-                    key={i}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="grid flex-1 grid-cols-1 grid-rows-[auto_auto_auto_1fr]">
-              <PricingCard
-                cta={pro.cta}
-                description={pro.description}
-                features={pro.features}
-                name={pro.name}
-                price={
-                  <AnimatedPrice
-                    billingPeriod={billingPeriod}
-                    pricing={pro.pricing}
-                    variant="featured"
-                  />
-                }
-                variant="featured"
-              />
-            </div>
-
-            <div className="relative hidden w-6 self-stretch overflow-hidden md:block lg:w-8">
-              <div className="-top-30 -left-12.5 absolute flex w-35 flex-col items-start justify-start">
-                {Array.from({ length: 200 }).map((_, i) => (
-                  <div
-                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
-                    key={i}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="grid flex-1 grid-cols-1 grid-rows-[auto_auto_auto_1fr]">
-              <PricingCard
-                cta={enterprise.cta}
-                description={enterprise.description}
-                features={enterprise.features}
-                name={enterprise.name}
-                price={
-                  <div className="flex flex-col items-start justify-start gap-1">
-                    <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary leading-[60px]">
-                      Contact us
-                    </div>
-                    <div className="font-medium font-sans text-muted-foreground text-sm">
-                      for custom pricing.
-                    </div>
+          <div className="grid flex-1 grid-cols-1 gap-y-12 py-12 md:grid-cols-[1fr_auto_1fr_auto_1fr] md:grid-rows-[auto_auto_auto_1fr] md:gap-y-0 md:py-0">
+            <PricingCard
+              cta={free.cta}
+              description={free.description}
+              features={free.features}
+              name={free.name}
+              price={
+                <div className="flex flex-col items-start justify-start gap-1">
+                  <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary leading-[60px]">
+                    $0
                   </div>
-                }
-              />
+                  <div className="font-medium font-sans text-muted-foreground text-sm">
+                    per {billingPeriod === "monthly" ? "month" : "year"}.
+                  </div>
+                </div>
+              }
+            />
+
+            <div className="relative hidden w-6 self-stretch overflow-hidden md:row-span-4 md:block lg:w-8">
+              <div className="-top-30 -left-12.5 absolute flex w-35 flex-col items-start justify-start">
+                {Array.from({ length: 200 }).map((_, i) => (
+                  <div
+                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                    key={i}
+                  />
+                ))}
+              </div>
             </div>
+
+            <PricingCard
+              cta={pro.cta}
+              description={pro.description}
+              features={pro.features}
+              name={pro.name}
+              price={
+                <div className="flex flex-col items-start justify-start gap-1">
+                  <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary-foreground/95 leading-[60px]">
+                    $
+                    {billingPeriod === "monthly"
+                      ? pro.pricing.monthly
+                      : pro.pricing.annually}
+                  </div>
+                  <div className="font-medium font-sans text-primary-foreground/80 text-sm">
+                    per {billingPeriod === "monthly" ? "month" : "year"}.
+                  </div>
+                </div>
+              }
+              variant="featured"
+            />
+
+            <div className="relative hidden w-6 self-stretch overflow-hidden md:row-span-4 md:block lg:w-8">
+              <div className="-top-30 -left-12.5 absolute flex w-35 flex-col items-start justify-start">
+                {Array.from({ length: 200 }).map((_, i) => (
+                  <div
+                    className="-rotate-45 h-4 origin-top-left self-stretch outline outline-[rgba(3,7,18,0.08)] outline-offset-[-0.25px]"
+                    key={i}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <PricingCard
+              cta={enterprise.cta}
+              description={enterprise.description}
+              features={enterprise.features}
+              name={enterprise.name}
+              price={
+                <div className="flex flex-col items-start justify-start gap-1">
+                  <div className="flex h-[60px] items-center font-medium font-serif text-5xl text-primary leading-[60px]">
+                    Contact us
+                  </div>
+                  <div className="font-medium font-sans text-muted-foreground text-sm">
+                    for custom pricing.
+                  </div>
+                </div>
+              }
+            />
           </div>
 
           <div className="relative hidden w-12 self-stretch overflow-hidden md:block">

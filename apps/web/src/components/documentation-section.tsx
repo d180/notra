@@ -1,10 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function DocumentationSection() {
   const [activeCard, setActiveCard] = useState(0);
+  const [animationKey, setAnimationKey] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveCard((prev) => (prev + 1) % 3);
+      setAnimationKey((prev) => prev + 1);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleCardClick = (index: number) => {
+    setActiveCard(index);
+    setAnimationKey((prev) => prev + 1);
+  };
 
   return (
     <div className="flex w-full flex-col items-center justify-center shadow-[inset_0_-1px_0_var(--border)]">
@@ -26,16 +41,26 @@ export default function DocumentationSection() {
 
       <div className="flex items-center justify-start self-stretch overflow-hidden px-4 md:px-9">
         <div className="flex flex-1 flex-col items-center justify-start gap-6 py-8 md:flex-row md:gap-12 md:py-11">
-          <div className="order-2 flex w-full flex-col items-center justify-center gap-4 md:order-1 md:w-auto md:max-w-[400px]">
+          <div className="order-2 flex w-full flex-col items-center justify-between gap-4 md:order-1 md:w-auto md:max-w-[400px] md:self-stretch">
             <button
               className={`flex w-full cursor-pointer flex-col items-start justify-start overflow-hidden border border-[rgba(2,6,23,0.08)] transition-all duration-300 ${
-                activeCard === 0
-                  ? "border-border bg-card shadow-[0px_0px_0px_0.75px_var(--border)_inset]"
-                  : ""
+                activeCard === 0 ? "border-border bg-white" : ""
               }`}
-              onClick={() => setActiveCard(0)}
+              onClick={() => handleCardClick(0)}
               type="button"
             >
+              <div
+                className={`h-0.5 w-full overflow-hidden bg-primary/8 ${activeCard === 0 ? "opacity-100" : "opacity-0"}`}
+              >
+                <div
+                  className="h-0.5 animate-[progressBar_5s_linear_forwards] bg-primary will-change-transform"
+                  key={
+                    activeCard === 0
+                      ? animationKey
+                      : `inactive-0-${animationKey}`
+                  }
+                />
+              </div>
               <div className="flex w-full flex-col gap-2 px-6 py-5">
                 <div className="flex flex-col justify-center self-stretch font-sans font-semibold text-foreground text-sm leading-6">
                   Auto-generate changelogs
@@ -50,13 +75,23 @@ export default function DocumentationSection() {
 
             <button
               className={`flex w-full cursor-pointer flex-col items-start justify-start overflow-hidden border border-[rgba(2,6,23,0.08)] transition-all duration-300 ${
-                activeCard === 1
-                  ? "border-border bg-card shadow-[0px_0px_0px_0.75px_var(--border)_inset]"
-                  : ""
+                activeCard === 1 ? "border-border bg-white" : ""
               }`}
-              onClick={() => setActiveCard(1)}
+              onClick={() => handleCardClick(1)}
               type="button"
             >
+              <div
+                className={`h-0.5 w-full overflow-hidden bg-primary/8 ${activeCard === 1 ? "opacity-100" : "opacity-0"}`}
+              >
+                <div
+                  className="h-0.5 animate-[progressBar_5s_linear_forwards] bg-primary will-change-transform"
+                  key={
+                    activeCard === 1
+                      ? animationKey
+                      : `inactive-1-${animationKey}`
+                  }
+                />
+              </div>
               <div className="flex w-full flex-col gap-2 px-6 py-5">
                 <div className="flex flex-col justify-center self-stretch font-sans font-semibold text-foreground text-sm leading-6">
                   Draft blog posts from features
@@ -71,13 +106,23 @@ export default function DocumentationSection() {
 
             <button
               className={`flex w-full cursor-pointer flex-col items-start justify-start overflow-hidden border border-[rgba(2,6,23,0.08)] transition-all duration-300 ${
-                activeCard === 2
-                  ? "border-border bg-card shadow-[0px_0px_0px_0.75px_var(--border)_inset]"
-                  : ""
+                activeCard === 2 ? "border-border bg-white" : ""
               }`}
-              onClick={() => setActiveCard(2)}
+              onClick={() => handleCardClick(2)}
               type="button"
             >
+              <div
+                className={`h-0.5 w-full overflow-hidden bg-primary/8 ${activeCard === 2 ? "opacity-100" : "opacity-0"}`}
+              >
+                <div
+                  className="h-0.5 animate-[progressBar_5s_linear_forwards] bg-primary will-change-transform"
+                  key={
+                    activeCard === 2
+                      ? animationKey
+                      : `inactive-2-${animationKey}`
+                  }
+                />
+              </div>
               <div className="flex w-full flex-col gap-2 px-6 py-5">
                 <div className="flex flex-col justify-center self-stretch font-sans font-semibold text-foreground text-sm leading-6">
                   Social updates from milestones
@@ -91,8 +136,8 @@ export default function DocumentationSection() {
             </button>
           </div>
 
-          <div className="order-1 flex w-full flex-col items-center justify-center gap-2 rounded-lg px-0 md:order-2 md:w-auto md:px-0">
-            <div className="flex h-[250px] w-full flex-col items-start justify-start overflow-hidden rounded-lg bg-card shadow-[0px_0px_0px_0.9056603908538818px_rgba(0,0,0,0.08)] md:h-[420px] md:w-[580px]">
+          <div className="order-1 flex w-full flex-col items-center justify-center gap-2 px-0 md:order-2 md:w-auto md:px-0">
+            <div className="flex h-[250px] w-full flex-col items-start justify-start overflow-hidden border border-border bg-card md:h-[420px] md:w-[580px]">
               {activeCard === 0 ? (
                 <div className="relative h-full w-full bg-card">
                   <div className="h-full overflow-hidden">
