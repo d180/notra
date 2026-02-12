@@ -5,6 +5,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { buttonVariants } from "@notra/ui/components/ui/button";
+import Link from "next/link";
 import { NotraMark, NotraWordmark } from "./notra-mark";
 
 export default function FooterSection() {
@@ -22,7 +23,7 @@ export default function FooterSection() {
               Notra
             </div>
           </div>
-          <div className="font-medium font-sans text-foreground/90 text-sm leading-[18px]">
+          <div className="font-medium font-sans text-foreground/90 text-sm leading-4.5">
             Turn your daily work into publish-ready content!
           </div>
           <div className="font-normal font-sans text-foreground/60 text-xs leading-5">
@@ -61,72 +62,49 @@ export default function FooterSection() {
         </div>
 
         <div className="flex flex-col flex-wrap items-start justify-start gap-6 self-stretch p-4 sm:flex-row sm:justify-between md:gap-8 md:p-8">
-          <div className="flex min-w-[120px] flex-1 flex-col items-start justify-start gap-3">
+          <div className="flex min-w-30 flex-1 flex-col items-start justify-start gap-3">
             <div className="self-stretch font-medium font-sans text-foreground/50 text-sm leading-5">
               Product
             </div>
             <div className="flex flex-col items-start justify-end gap-2">
-              <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
+              <Link
+                className="font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary"
+                href="/#features"
+              >
                 Features
-              </div>
-              <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
+              </Link>
+              <Link
+                className="font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary"
+                href="/#pricing"
+              >
                 Pricing
-              </div>
-              <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Integrations
-              </div>
-              <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Changelog
-              </div>
-              <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Blog Drafts
-              </div>
+              </Link>
             </div>
           </div>
 
-          <div className="flex min-w-[120px] flex-1 flex-col items-start justify-start gap-3">
+          <div className="flex min-w-30 flex-1 flex-col items-start justify-start gap-3">
             <div className="font-medium font-sans text-foreground/50 text-sm leading-5">
-              Company
+              Legal
             </div>
             <div className="flex flex-col items-start justify-center gap-2">
-              <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                About us
-              </div>
-              <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Our team
-              </div>
-              <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Careers
-              </div>
-              <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Brand
-              </div>
-              <div className="cursor-pointer font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Contact
-              </div>
-            </div>
-          </div>
-
-          <div className="flex min-w-[120px] flex-1 flex-col items-start justify-start gap-3">
-            <div className="font-medium font-sans text-foreground/50 text-sm leading-5">
-              Resources
-            </div>
-            <div className="flex flex-col items-center justify-center gap-2">
-              <div className="cursor-pointer self-stretch font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Terms of use
-              </div>
-              <div className="cursor-pointer self-stretch font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                API Reference
-              </div>
-              <div className="cursor-pointer self-stretch font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Documentation
-              </div>
-              <div className="cursor-pointer self-stretch font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Community
-              </div>
-              <div className="cursor-pointer self-stretch font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary">
-                Support
-              </div>
+              <Link
+                className="font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary"
+                href="/privacy"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                className="font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary"
+                href="/terms"
+              >
+                Terms of Service
+              </Link>
+              <Link
+                className="font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary"
+                href="/legal"
+              >
+                Legal Notice
+              </Link>
             </div>
           </div>
         </div>
@@ -137,11 +115,11 @@ export default function FooterSection() {
           <div className="relative h-full w-full">
             {Array.from({ length: 400 }).map((_, i) => (
               <div
-                className="absolute h-16 w-[300px] border border-[rgba(3,7,18,0.08)]"
+                className="absolute h-16 w-75 border border-[rgba(3,7,18,0.08)]"
                 key={i}
                 style={{
-                  left: `${i * 300 - 600}px`,
-                  top: "-120px",
+                  left: `${i * 18.75 - 37.5}rem`,
+                  top: "-7.5rem",
                   transform: "rotate(-45deg)",
                   transformOrigin: "top left",
                 }}
@@ -152,7 +130,7 @@ export default function FooterSection() {
       </div>
 
       <div className="w-full px-4 md:px-8">
-        <NotraWordmark className="-my-3 mx-auto max-w-[520px]" />
+        <NotraWordmark className="-my-3 mx-auto max-w-130" />
       </div>
     </div>
   );

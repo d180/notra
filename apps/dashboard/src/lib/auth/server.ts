@@ -230,7 +230,11 @@ export const auth = betterAuth({
       domain: ".usenotra.com",
     },
   },
-  trustedOrigins: ["http://localhost:3000", "https://app.usenotra.com", "https://www.usenotra.com"],
+  trustedOrigins: [
+    "http://localhost:3000",
+    "https://app.usenotra.com",
+    "https://www.usenotra.com",
+  ],
   session: {
     storeSessionInDatabase: true,
     preserveSessionInDatabase: true,

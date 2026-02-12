@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, Inter } from "next/font/google";
+import FooterSection from "../components/footer-section";
+import { Navbar } from "../components/navbar";
 
 import "@/styles/globals.css";
 
@@ -33,7 +35,22 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${instrumentSerif.variable} antialiased`}
       >
-        {children}
+        <div className="relative flex min-h-screen w-full flex-col items-center justify-start bg-background">
+          <div className="relative flex w-full flex-col items-center justify-start">
+            <div className="relative flex w-full max-w-none flex-col items-start justify-start px-4 sm:px-6 md:px-8 lg:w-[66.25rem] lg:max-w-[66.25rem] lg:px-0">
+              <div className="absolute top-0 left-4 z-0 h-full w-px bg-border shadow-[1px_0px_0px_white] sm:left-6 md:left-8 lg:left-0" />
+              <div className="absolute top-0 right-4 z-0 h-full w-px bg-border shadow-[1px_0px_0px_white] sm:right-6 md:right-8 lg:right-0" />
+
+              <div className="relative z-10 flex flex-col items-center self-stretch pt-[0.5625rem] pb-8 md:pb-12">
+                <Navbar />
+                {children}
+                <div className="w-full">
+                  <FooterSection />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </body>
     </html>
   );
