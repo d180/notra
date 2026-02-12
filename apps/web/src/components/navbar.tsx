@@ -28,7 +28,7 @@ export function Navbar() {
 
   return (
     <>
-      <div className="absolute top-0 left-0 z-20 flex h-12 w-full items-center justify-center px-6 sm:h-14 sm:px-8 md:h-16 md:px-12 lg:h-[84px] lg:px-0">
+      <div className="absolute top-2 left-0 z-20 flex h-12 w-full items-center justify-center px-6 sm:top-0 sm:h-14 sm:px-8 md:h-16 md:px-12 lg:h-[84px] lg:px-0">
         <div className="relative z-30 flex h-10 w-full max-w-[calc(100%-16px)] items-center justify-between overflow-hidden rounded-lg border border-border/60 bg-background px-3 py-1.5 pr-2 shadow-[0px_1px_2px_rgba(2,6,23,0.05)] backdrop-blur-sm sm:h-11 sm:max-w-[calc(100%-48px)] sm:px-4 sm:py-2 sm:pr-3 md:h-12 md:max-w-[calc(100%-64px)] md:px-4 lg:w-[960px] lg:max-w-[960px]">
           <div className="flex items-center justify-center">
             <Link className="flex items-center justify-start gap-2" href="/">
