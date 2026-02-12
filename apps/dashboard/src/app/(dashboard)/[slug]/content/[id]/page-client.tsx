@@ -10,6 +10,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@notra/ui/components/ui/tabs";
+import { TitleCard } from "@notra/ui/components/ui/title-card";
 import {
   Tooltip,
   TooltipContent,
@@ -30,7 +31,6 @@ import { CONTENT_TYPE_LABELS } from "@/components/content/content-card";
 import { DiffView } from "@/components/content/diff-view";
 import { LexicalEditor } from "@/components/content/editor/lexical-editor";
 import type { EditorRefHandle } from "@/components/content/editor/plugins/editor-ref-plugin";
-import { TitleCard } from "@/components/title-card";
 import { sourceMetadataSchema } from "@/utils/schemas/content";
 import { useContent } from "../../../../../lib/hooks/use-content";
 import { ContentDetailSkeleton } from "./skeleton";
@@ -335,7 +335,7 @@ export default function PageClient({
           const lines = textarea.value.substring(0, offset).split("\n");
           return {
             line: lines.length,
-            char: (lines[lines.length - 1]?.length ?? 0) + 1,
+            char: (lines.at(-1)?.length ?? 0) + 1,
           };
         };
         const start = getLineAndChar(startOffset);
@@ -418,7 +418,9 @@ export default function PageClient({
       if (message?.role === "assistant" && message.parts) {
         for (let j = message.parts.length - 1; j >= 0; j--) {
           const part = message.parts[j];
-          if (!part) continue;
+          if (!part) {
+            continue;
+          }
           if (part.type === "text" && part.text?.trim()) {
             return part.text.trim();
           }
@@ -558,7 +560,9 @@ export default function PageClient({
                 const parsed = sourceMetadataSchema.safeParse(
                   content.sourceMetadata
                 );
-                if (!parsed.success || !parsed.data) return null;
+                if (!parsed.success || !parsed.data) {
+                  return null;
+                }
                 const meta = parsed.data;
                 const repoLabel = formatRepos(meta.repositories);
                 const needsTooltip = meta.repositories.length > 1;

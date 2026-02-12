@@ -59,7 +59,9 @@ import { SchedulePageSkeleton } from "./skeleton";
 const CRON_SOURCE_TYPES: TriggerSourceType[] = ["cron"];
 
 function formatFrequency(cron?: Trigger["sourceConfig"]["cron"]) {
-  if (!cron) return "Not set";
+  if (!cron) {
+    return "Not set";
+  }
   const time = `${String(cron.hour).padStart(2, "0")}:${String(cron.minute).padStart(2, "0")} UTC`;
   if (cron.frequency === "weekly") {
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -151,7 +153,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
       queryClient.setQueryData<{ triggers: Trigger[] }>(
         QUERY_KEYS.AUTOMATION.schedules(organizationId ?? ""),
         (old) => {
-          if (!old) return old;
+          if (!old) {
+            return old;
+          }
           return {
             triggers: old.triggers.map((t) =>
               t.id === trigger.id ? { ...t, enabled: !t.enabled } : t
@@ -211,7 +215,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
       queryClient.setQueryData<{ triggers: Trigger[] }>(
         QUERY_KEYS.AUTOMATION.schedules(organizationId ?? ""),
         (old) => {
-          if (!old) return old;
+          if (!old) {
+            return old;
+          }
           return {
             triggers: old.triggers.filter((t) => t.id !== triggerId),
           };
