@@ -88,7 +88,9 @@ export default function BillingUsagePage() {
 
   // Extract all features from customer object
   const features = useMemo<FeatureData[]>(() => {
-    if (!customer?.features) return [];
+    if (!customer?.features) {
+      return [];
+    }
 
     return Object.entries(customer.features).map(([id, feature]) => {
       const balance =

@@ -335,7 +335,7 @@ export default function PageClient({
           const lines = textarea.value.substring(0, offset).split("\n");
           return {
             line: lines.length,
-            char: (lines[lines.length - 1]?.length ?? 0) + 1,
+            char: (lines.at(-1)?.length ?? 0) + 1,
           };
         };
         const start = getLineAndChar(startOffset);
@@ -418,7 +418,9 @@ export default function PageClient({
       if (message?.role === "assistant" && message.parts) {
         for (let j = message.parts.length - 1; j >= 0; j--) {
           const part = message.parts[j];
-          if (!part) continue;
+          if (!part) {
+            continue;
+          }
           if (part.type === "text" && part.text?.trim()) {
             return part.text.trim();
           }
@@ -558,7 +560,9 @@ export default function PageClient({
                 const parsed = sourceMetadataSchema.safeParse(
                   content.sourceMetadata
                 );
-                if (!parsed.success || !parsed.data) return null;
+                if (!parsed.success || !parsed.data) {
+                  return null;
+                }
                 const meta = parsed.data;
                 const repoLabel = formatRepos(meta.repositories);
                 const needsTooltip = meta.repositories.length > 1;

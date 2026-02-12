@@ -39,7 +39,9 @@ export default function GeneralSettingsPage({ params }: PageProps) {
       slug: organization?.slug ?? "",
     },
     onSubmit: async ({ value }) => {
-      if (!organization?.id) return;
+      if (!organization?.id) {
+        return;
+      }
 
       setIsUpdating(true);
       try {
@@ -94,13 +96,21 @@ export default function GeneralSettingsPage({ params }: PageProps) {
   });
 
   useEffect(() => {
-    if (!organization) return;
+    if (!organization) {
+      return;
+    }
 
     form.reset({
       name: organization.name,
       slug: organization.slug,
     });
-  }, [organization?.id, organization?.name, organization?.slug]);
+  }, [
+    organization?.id,
+    organization?.name,
+    organization?.slug,
+    form.reset,
+    organization,
+  ]);
 
   if (!organization) {
     return (
