@@ -6,6 +6,7 @@ import { serve } from "@upstash/workflow/nextjs";
 import { generateText, Output } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { gateway } from "@/lib/ai/gateway";
 import { getFirecrawlClient } from "@/lib/firecrawl";
 import { redis } from "@/lib/redis";
 import { getBaseUrl } from "@/lib/triggers/qstash";
@@ -89,7 +90,7 @@ export const { POST } = serve<BrandAnalysisPayload>(
     if (!parseResult.success) {
       console.error(
         "[Brand Analysis] Invalid payload:",
-        parseResult.error.flatten()
+        z.flattenError(parseResult.error)
       );
       await context.cancel();
       return;
@@ -188,7 +189,7 @@ export const { POST } = serve<BrandAnalysisPayload>(
       async () => {
         try {
           const { output } = await generateText({
-            model: "moonshotai/kimi-k2.5",
+            model: gateway("anthropic/claude-haiku-4.5"),
             output: Output.object({ schema: brandSettingsSchema }),
             prompt: `Analyze this website content and extract brand identity information.
 

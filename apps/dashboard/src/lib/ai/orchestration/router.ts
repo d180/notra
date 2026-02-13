@@ -1,12 +1,13 @@
-import { gateway, generateText, Output } from "ai";
+import { generateText, Output } from "ai";
+import { gateway } from "@/lib/ai/gateway";
 import { ROUTING_PROMPT } from "@/lib/ai/prompts/router";
 import { routingDecisionSchema } from "./schemas";
 import type { RoutingDecision, RoutingResult } from "./types";
 
 export const MODELS = {
   router: "openai/gpt-oss-120b", // Only for routing decisions, no supermemory
-  simple: "openai/gpt-5.1",
-  complex: "anthropic/claude-sonnet-4.5",
+  simple: "openai/gpt-5.1-instant",
+  complex: "anthropic/claude-haiku-4.5",
 } as const;
 
 export async function routeMessage(

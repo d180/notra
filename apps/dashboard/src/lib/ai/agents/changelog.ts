@@ -1,11 +1,21 @@
 import { withSupermemory } from "@supermemory/tools/ai-sdk";
-import { gateway, Output, stepCountIs, ToolLoopAgent } from "ai";
+import {
+  extractJsonMiddleware,
+  NoObjectGeneratedError,
+  Output,
+  parsePartialJson,
+  stepCountIs,
+  ToolLoopAgent,
+  wrapLanguageModel,
+} from "ai";
 import { z } from "zod";
+import { gateway } from "@/lib/ai/gateway";
 import { getCasualChangelogPrompt } from "@/lib/ai/prompts/changelog/casual";
 import { getConversationalChangelogPrompt } from "@/lib/ai/prompts/changelog/conversational";
 import { getFormalChangelogPrompt } from "@/lib/ai/prompts/changelog/formal";
 import { getProfessionalChangelogPrompt } from "@/lib/ai/prompts/changelog/professional";
 import type { ChangelogTonePromptInput } from "@/lib/ai/prompts/changelog/types";
+import { getChangelogUserPrompt } from "@/lib/ai/prompts/changelog/user";
 import {
   createGetCommitsByTimeframeTool,
   createGetPullRequestsTool,
@@ -36,10 +46,7 @@ export interface ChangelogAgentOptions {
   promptInput: ChangelogTonePromptInput;
 }
 
-const changelogPromptByTone: Record<
-  ToneProfile,
-  (params: ChangelogTonePromptInput) => string
-> = {
+const changelogPromptByTone: Record<ToneProfile, () => string> = {
   Conversational: getConversationalChangelogPrompt,
   Professional: getProfessionalChangelogPrompt,
   Casual: getCasualChangelogPrompt,
@@ -56,25 +63,20 @@ export async function generateChangelog(
     promptInput,
   } = options;
 
-  const modelWithMemory = withSupermemory(
-    gateway("anthropic/claude-sonnet-4.5"),
-    organizationId
-  );
+  const model = wrapLanguageModel({
+    model: withSupermemory(gateway("anthropic/claude-haiku-4.5"), organizationId),
+    middleware: extractJsonMiddleware(),
+  });
 
   const resolvedTone: ToneProfile = getValidToneProfile(tone, "Conversational");
 
   const promptFactory =
     changelogPromptByTone[resolvedTone] ?? changelogPromptByTone.Conversational;
-  const prompt = promptFactory(promptInput);
-
-  const agentInstructions =
-    "You write changelogs from GitHub activity. Follow the user prompt exactly and use tools only when needed. " +
-    "CRITICAL: Return only a single JSON object matching the output schema with exactly two string fields: title and markdown. " +
-    "Do not output markdown, commentary, or code fences. Ensure the JSON is valid (double quotes, no trailing commas). " +
-    "If the markdown field spans multiple lines, encode line breaks as \\n within the JSON string.";
+  const instructions = promptFactory();
+  const prompt = getChangelogUserPrompt(promptInput);
 
   const agent = new ToolLoopAgent({
-    model: modelWithMemory,
+    model,
     output: Output.object({
       schema: changelogOutputSchema,
     }),
@@ -94,11 +96,27 @@ export async function generateChangelog(
       listAvailableSkills: listAvailableSkills(),
       getSkillByName: getSkillByName(),
     },
-    instructions: agentInstructions,
+    instructions,
     stopWhen: stepCountIs(35),
   });
 
-  const agentResult = await agent.generate({ prompt });
-
-  return { output: agentResult.output };
+  try {
+    const result = await agent.generate({ prompt });
+    return { output: result.output };
+  } catch (error) {
+    if (!NoObjectGeneratedError.isInstance(error) || !error.text) {
+      throw error;
+    }
+    const { state, value } = await parsePartialJson(error.text);
+    if (
+      (state === "repaired-parse" || state === "successful-parse") &&
+      value != null
+    ) {
+      const parsed = changelogOutputSchema.safeParse(value);
+      if (parsed.success) {
+        return { output: parsed.data };
+      }
+    }
+    throw error;
+  }
 }
