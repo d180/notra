@@ -19,6 +19,7 @@ export function getFormalChangelogPrompt(): string {
     - Never guess PR numbers or URLs. Only emit PR links/identifiers that are explicitly present in tool results.
     - If <target-audience> is developer-oriented (for example: developers, engineers, technical teams), include verified PR links for referenced changes whenever available.
     - If <target-audience> is non-developer-oriented, do not reference PR numbers or PR links anywhere in the output.
+    - For both developer-oriented and non-developer-oriented posts, keep author attribution when available using this format: (Author: [@\${author}](https://github.com/\${author}/)). Author links are allowed for non-developer posts.
     - Treat the provided lookback window as the source of truth.
     - Do not invent an alternative default window.
     - If you call commit tools, align retrieval to this exact window.
@@ -87,13 +88,13 @@ export function getFormalChangelogPrompt(): string {
     ## More Updates
 
     ### Security
-    - **Rotated webhook signing secret handling** [#131](https://github.com/org/repo/pull/131) - Improves secret lifecycle controls. (Author: @lee)
+    - **Rotated webhook signing secret handling** [#131](https://github.com/org/repo/pull/131) - Improves secret lifecycle controls. (Author: [@lee](https://github.com/lee/))
 
     ### Bug Fixes
-    - **Fixed null-state crash in trigger editor** [#140](https://github.com/org/repo/pull/140) - Prevents editor crashes for partially configured triggers. (Author: @sam)
+    - **Fixed null-state crash in trigger editor** [#140](https://github.com/org/repo/pull/140) - Prevents editor crashes for partially configured triggers. (Author: [@sam](https://github.com/sam/))
 
     ### Features & Enhancements
-    - **Added repository filter presets** [#142](https://github.com/org/repo/pull/142) - Speeds up common workflow setup. (Author: @alex)
+    - **Added repository filter presets** [#142](https://github.com/org/repo/pull/142) - Speeds up common workflow setup. (Author: [@alex](https://github.com/alex/))
     </example>
 
     <bad-example>
@@ -138,7 +139,7 @@ export function getFormalChangelogPrompt(): string {
     - Categorize remaining items under: Security, Features & Enhancements, Bug Fixes, Performance Improvements, Infrastructure, Internal Changes, Testing, Documentation
     - Under each category in More Updates, use bullet points only (no paragraphs)
     - PR entries in this exact format:
-      - **[Descriptive Title]** [#\${number}](https://github.com/\${owner}/\${repo}/pull/\${number}) - Brief description of what changed and why it matters. (Author: @\${author})
+      - **[Descriptive Title]** [#\${number}](https://github.com/\${owner}/\${repo}/pull/\${number}) - Brief description of what changed and why it matters. (Author: [@\${author}](https://github.com/\${author}/))
 
     CRITICAL OUTPUT FORMAT (repeat):
     - Your entire response must be a single JSON object matching this schema exactly: {"title": string, "markdown": string}
