@@ -28,7 +28,7 @@ export function TriggerRowActions({
 }: TriggerRowActionsProps) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex size-8 items-center justify-center rounded-md hover:bg-accent">
+      <DropdownMenuTrigger className="flex size-8 cursor-pointer items-center justify-center rounded-md hover:bg-accent">
         <HugeiconsIcon
           className="size-4 text-muted-foreground"
           icon={MoreVerticalIcon}

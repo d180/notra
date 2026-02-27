@@ -5,7 +5,9 @@ import {
   ArrowUp01Icon,
   Book01Icon,
   Copy01Icon,
+  Delete02Icon,
   Dots,
+  Edit02Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
@@ -225,12 +227,13 @@ function ApiKeysTableContent({
               </Button>
             }
           />
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="min-w-44">
             <DropdownMenuGroup>
               <DropdownMenuItem
                 disabled={actionsDisabled}
                 onClick={() => onEdit(apiKey)}
               >
+                <HugeiconsIcon className="size-4" icon={Edit02Icon} />
                 Edit API key
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -239,6 +242,7 @@ function ApiKeysTableContent({
                 onClick={() => onDelete(apiKey)}
                 variant="destructive"
               >
+                <HugeiconsIcon className="size-4" icon={Delete02Icon} />
                 Delete API key
               </DropdownMenuItem>
             </DropdownMenuGroup>
