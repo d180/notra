@@ -1,4 +1,5 @@
 import { type Tool, tool } from "ai";
+// biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
 import { createOctokit } from "@/lib/octokit";
 import { getGitHubToolRepositoryContextByIntegrationId } from "@/lib/services/github-integration";
@@ -234,7 +235,45 @@ Returns comprehensive PR data including diff stats, labels, and review state.`,
             },
           })
         );
-        return pullRequest.data;
+        return {
+          id: pullRequest.data.id,
+          number: pullRequest.data.number,
+          title: pullRequest.data.title,
+          body: pullRequest.data.body ?? null,
+          state: pullRequest.data.state,
+          isDraft: pullRequest.data.draft,
+          merged: pullRequest.data.merged,
+          mergeableState: pullRequest.data.mergeable_state,
+          authorLogin: pullRequest.data.user?.login ?? "unknown",
+          authorAssociation: pullRequest.data.author_association,
+          labels: pullRequest.data.labels.map((label) =>
+            typeof label === "string" ? label : label.name
+          ),
+          requestedReviewers: (pullRequest.data.requested_reviewers ?? []).map(
+            (reviewer) => reviewer.login
+          ),
+          head: {
+            ref: pullRequest.data.head.ref,
+            sha: pullRequest.data.head.sha,
+          },
+          base: {
+            ref: pullRequest.data.base.ref,
+            sha: pullRequest.data.base.sha,
+          },
+          stats: {
+            commits: pullRequest.data.commits,
+            additions: pullRequest.data.additions,
+            deletions: pullRequest.data.deletions,
+            changedFiles: pullRequest.data.changed_files,
+            comments: pullRequest.data.comments,
+            reviewComments: pullRequest.data.review_comments,
+          },
+          createdAt: pullRequest.data.created_at,
+          updatedAt: pullRequest.data.updated_at,
+          closedAt: pullRequest.data.closed_at,
+          mergedAt: pullRequest.data.merged_at,
+          htmlUrl: pullRequest.data.html_url,
+        };
       },
     }),
     {
@@ -296,7 +335,33 @@ Returns release body (changelog), assets list, author, and timestamps.`,
             },
           })
         );
-        return releases.data;
+        return {
+          id: releases.data.id,
+          tagName: releases.data.tag_name,
+          targetCommitish: releases.data.target_commitish,
+          name: releases.data.name ?? null,
+          body: releases.data.body ?? null,
+          draft: releases.data.draft,
+          prerelease: releases.data.prerelease,
+          immutable: releases.data.immutable,
+          authorLogin: releases.data.author?.login ?? "unknown",
+          createdAt: releases.data.created_at,
+          publishedAt: releases.data.published_at ?? null,
+          updatedAt: releases.data.updated_at ?? null,
+          htmlUrl: releases.data.html_url,
+          discussionUrl: releases.data.discussion_url ?? null,
+          mentionsCount: releases.data.mentions_count ?? 0,
+          assets: releases.data.assets.map((asset) => ({
+            id: asset.id,
+            name: asset.name,
+            label: asset.label ?? null,
+            contentType: asset.content_type,
+            state: asset.state,
+            size: asset.size,
+            downloadCount: asset.download_count,
+            browserDownloadUrl: asset.browser_download_url,
+          })),
+        };
       },
     }),
     {
@@ -378,7 +443,14 @@ Use this for activity summaries, changelog generation, or understanding recent c
         const nextPage = getNextPageFromLinkHeader(response.headers?.link);
 
         return {
-          commits: response.data,
+          commits: response.data.map((commit) => ({
+            sha: commit.sha,
+            message: commit.commit.message,
+            authorName:
+              commit.author?.login ?? commit.commit.author?.name ?? "unknown",
+            authoredAt: commit.commit.author?.date ?? null,
+            url: commit.html_url,
+          })),
           pagination: {
             page,
             perPage: 100,
