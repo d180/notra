@@ -20,9 +20,15 @@ import {
   SelectValue,
 } from "@notra/ui/components/ui/select";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { authClient } from "@/lib/auth/client";
+import {
+  isTeamMemberLimitError,
+  mapBillingLimitErrorMessage,
+} from "@/lib/billing/limits";
 
 interface InviteMemberModalProps {
   organizationId?: string;
@@ -38,6 +44,8 @@ export function InviteMemberModal({
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"member" | "admin" | "owner">("member");
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const { activeOrganization } = useOrganizationsContext();
 
   const { mutate: inviteMember, isPending } = useMutation({
     mutationFn: async () => {
@@ -67,7 +75,22 @@ export function InviteMemberModal({
       });
     },
     onError: (error) => {
-      toast.error(error.message);
+      const message = mapBillingLimitErrorMessage(
+        error.message,
+        "Failed to send invitation"
+      );
+
+      if (isTeamMemberLimitError(error.message) && activeOrganization?.slug) {
+        toast.error(message, {
+          action: {
+            label: "View plans",
+            onClick: () => router.push(`/${activeOrganization.slug}/billing`),
+          },
+        });
+        return;
+      }
+
+      toast.error(message);
     },
   });
 
