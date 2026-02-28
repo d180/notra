@@ -49,9 +49,7 @@
         "useSimplifiedLogicExpression": "off",
 
         /* Needs more work to fix */
-        "noExcessiveCognitiveComplexity": "off",
-
-        "useOptionalChain": "warn"
+        "noExcessiveCognitiveComplexity": "off"
       },
       "correctness": {
         /* Doesn't work with Astro */
