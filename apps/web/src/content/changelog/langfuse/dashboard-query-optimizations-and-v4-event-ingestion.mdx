@@ -1,0 +1,117 @@
+---
+title: "Langfuse Changelog - February 14-21, 2026"
+date: "2026-02-21"
+description: "Langfuse improved dashboard performance with v2 query optimizations, added bloom filter indexes for faster user and session lookups, enabled header-based direct writes to v4 event tables, and expanded event table filtering and batch tooling."
+---
+
+This week brings significant performance improvements to dashboard queries, expanded event table capabilities, and developer-focused enhancements. Major work completed includes optimizing v2 metrics queries with uniq(trace\_id) aggregation for blazing-fast dashboard tiles, implementing bloom filter indexes on user\_id and session\_id columns for faster row lookups, and adding head-based opt-in support for direct writes into v4 event tables. Dashboard widgets can now switch query paths based on feature flags, observation table filtering now supports level-based selection, and prompt management gains folder deletion functionality. These improvements directly improve query speed, reduce dashboard load times, and provide operators with better control over their event ingestion paths.
+
+## Highlights
+
+### Dashboard query optimization with uniq(trace\_id) aggregation
+
+Replaced slow eventsTracesView path with direct uniq(trace\_id) aggregation on eventsObservationsView, dramatically reducing query complexity and execution time for dashboard trace tiles in v2. Custom widgets, score histograms, and model usage queries all benefit from this single-level optimization pattern.
+
+### Bloom filter indexes on user\_id and session\_id
+
+Added bloom\_filter(0.01) indexes to events\_core and events\_full tables, accelerating row-level filtering when querying by user or session without consuming excessive disk space. Materialized views auto-populate these indexes, seamlessly integrating with existing data pipelines.
+
+### Head-based opt-in for direct event writes to v4 tables
+
+Operators can now enable direct event table writes via HTTP headers, bypassing the legacy v1 path. OTEL spans automatically support this opt-in, allowing early adopters to test v4 event storage without full platform migration.
+
+### EventsSessionAggregationQueryBuilder for direct session metrics
+
+Eliminated redundant two-step trace aggregation by building session metrics directly from events\_core via GROUP BY session\_id, pushing filters into inner CTEs for better query planning and faster result sets.
+
+### Dashboard v1/v2 metrics consistency validation
+
+Added comprehensive test coverage comparing v1 and v2 metric outputs, ensuring data integrity during the gradual migration and catching regressions early in the pipeline.
+
+## More Updates
+
+### Features & Enhancements
+
+- **Dashboard v2 metrics version support for custom widgets** [#12177](https://github.com/langfuse/langfuse/pull/12177) - Widgets now respect the v2 metrics query path, enabling the uniq(trace\_id) optimization. (Author: [@sumerman](https://github.com/sumerman/))
+- **Add v2 backend paths for score histogram and model usage queries** [#12146](https://github.com/langfuse/langfuse/pull/12146) - Extends QueryBuilder with pairExpand concept for ARRAY JOIN on ClickHouse Map columns. (Author: [@sumerman](https://github.com/sumerman/))
+- **Add v2 backend path for score-aggregate dashboard query** [#12136](https://github.com/langfuse/langfuse/pull/12136) - Wires metricsVersion through chart tRPC endpoints. (Author: [@sumerman](https://github.com/sumerman/))
+- **Level filter support in trace filter sidebar** [#12174](https://github.com/langfuse/langfuse/pull/12174) - Users can now filter observations by depth level in trace view. (Author: [@nimarb](https://github.com/nimarb/))
+- **Position filter in trace exploration** [#12058](https://github.com/langfuse/langfuse/pull/12058) - New position-based filtering for trace observation navigation. (Author: [@nimarb](https://github.com/nimarb/))
+- **Add dataset batch action for events table** [#12144](https://github.com/langfuse/langfuse/pull/12144) - Multi-select observations can now be bulk-added to datasets. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **Icon rendering support in filter facets** [#12169](https://github.com/langfuse/langfuse/pull/12169) - Observation type icons now appear in filter sidebar, improving visual scanability. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **Tooltip support for filter sidebar facets** [#12168](https://github.com/langfuse/langfuse/pull/12168) - "Is Root Observation" and other complex filters show helpful explanations on hover. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **Info icon indicators for filters with tooltips** [#12176](https://github.com/langfuse/langfuse/pull/12176) - Visual cue shows when additional filter documentation is available. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **Support Japanese characters in prompt variables** [#11509](https://github.com/langfuse/langfuse/pull/11509) - Prompt templates now accept Unicode characters in variable names. (Author: [@komechan-rh](https://github.com/komechan-rh/))
+- **Delete entire prompt folders** [#11920](https://github.com/langfuse/langfuse/pull/11920) - Folder deletion with cascade removes all contained prompts with confirmation dialog. (Author: [@5h0ov](https://github.com/5h0ov/))
+- **Mixpanel and PostHog integration project name support** [#12038](https://github.com/langfuse/langfuse/pull/12038) - Analytics integrations now include langfuse\_project\_name alongside project\_id for better filtering. (Author: [@shmulik-apiiro](https://github.com/shmulik-apiiro/))
+- **Enhanced dataset selection in experiments UI** [#12059](https://github.com/langfuse/langfuse/pull/12059) - Popover-based dataset picker with search for faster experiment setup. (Author: [@marliessophie](https://github.com/marliessophie/))
+- **Peek view table support** [#12044](https://github.com/langfuse/langfuse/pull/12044) - Inline table rendering in detail modals for richer data exploration. (Author: [@marliessophie](https://github.com/marliessophie/))
+- **Head-based opt-in for v4 event writes** [#12025](https://github.com/langfuse/langfuse/pull/12025) - HTTP header controls enable direct event table writes; OTEL spans automatically supported. (Author: [@sumerman](https://github.com/sumerman/))
+- **Add performance controls for GET /api/public/traces** [#12062](https://github.com/langfuse/langfuse/pull/12062) - Self-hosters can now enforce date range requirements and restrict field groups to optimize trace endpoint performance. (Author: [@Steffen911](https://github.com/Steffen911/))
+
+### Bug Fixes
+
+- **Improve chart loading and failure state hints** [#12180](https://github.com/langfuse/langfuse/pull/12180) - Better visual feedback during chart data load and clearer error messaging. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+- **Remove spurious whitespace from .env example** [#12106](https://github.com/langfuse/langfuse/pull/12106) - Standard .env parsers now work without errors. (Author: [@LoneRifle](https://github.com/LoneRifle/))
+- **Fix datasets graph formatting for seconds** [#12165](https://github.com/langfuse/langfuse/pull/12165) - Dataset performance graphs display time units correctly. (Author: [@nimarb](https://github.com/nimarb/))
+- **CSV upload column mapping for dataset schemas** [#12141](https://github.com/langfuse/langfuse/pull/12141) - Users can now map entire columns when schemas are defined. (Author: [@marliessophie](https://github.com/marliessophie/))
+- **Unbounded dashboard query row limits** [#12160](https://github.com/langfuse/langfuse/pull/12160) - Dashboard queries now include row\_limit protection preventing memory exhaustion. (Author: [@sumerman](https://github.com/sumerman/))
+- **Time dimension query root event timestamp** [#12118](https://github.com/langfuse/langfuse/pull/12118) - Traces timeline queries now use correct root event timestamps. (Author: [@sumerman](https://github.com/sumerman/))
+- **Trace table update when metrics loaded** [#12113](https://github.com/langfuse/langfuse/pull/12113) - UI now refreshes after async metric data arrives. (Author: [@nimarb](https://github.com/nimarb/))
+- **Coerce usage details to number in evals** [#12130](https://github.com/langfuse/langfuse/pull/12130) - ClickHouse numeric values now parse correctly in evaluation streaming. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **Apply custom base path to sign-out callback** [#12036](https://github.com/langfuse/langfuse/pull/12036) - Self-hosted instances with custom paths now redirect correctly on logout. (Author: [@hyeonch](https://github.com/hyeonch/))
+- **Mutual exclusion for Anthropic temperature and top\_p** [#12020](https://github.com/langfuse/langfuse/pull/12020) - Playground auto-disables conflicting parameters to prevent API 400 errors. (Author: [@hobostay](https://github.com/hobostay/))
+- **Prevent empty target submission in evaluator forms** [#12088](https://github.com/langfuse/langfuse/pull/12088) - Form validation catches configuration errors before submission. (Author: [@marliessophie](https://github.com/marliessophie/))
+- **Add folder path when creating prompt from folder** [#12043](https://github.com/langfuse/langfuse/pull/12043) - New prompts inherit parent folder structure automatically. (Author: [@nimarb](https://github.com/nimarb/))
+- **Add default generation filter to observation evaluators** [#12033](https://github.com/langfuse/langfuse/pull/12033) - New observation evals default to GENERATION type with inline warnings for unfiltered runs. (Author: [@hassiebp](https://github.com/hassiebp/))
+
+### Performance Improvements
+
+- **Optimize v2 traces queries with uniq(trace\_id)** [#12175](https://github.com/langfuse/langfuse/pull/12175) - Single-level aggregation on observations view eliminates expensive subqueries. (Author: [@sumerman](https://github.com/sumerman/))
+- **Optimize v2 traces queries via root-event filter** [#12166](https://github.com/langfuse/langfuse/pull/12166) - Reformulates queries to leverage parentObservationId IS NULL for single-pass optimization. (Author: [@sumerman](https://github.com/sumerman/))
+- **Add bloom filter indexes on user\_id and session\_id** [#12120](https://github.com/langfuse/langfuse/pull/12120) - Accelerates row lookups for user and session filtering on event tables. (Author: [@Steffen911](https://github.com/Steffen911/))
+
+### Infrastructure
+
+- **Optional lightweight UPDATE codepath for ClickHouse** [#12090](https://github.com/langfuse/langfuse/pull/12090) - Adds configurable update path for event table mutations. (Author: [@Copilot](https://github.com/apps/copilot-swe-agent/))
+- **SYSTEM SYNC REPLICA before event propagation** [#12079](https://github.com/langfuse/langfuse/pull/12079) - Ensures replica consistency before INSERT-SELECT in event pipeline. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Add delay metrics for event propagation job** [#12138](https://github.com/langfuse/langfuse/pull/12138) - Gauge metrics track partition processing lag for operational visibility. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Configurable Redis cluster slots refresh timeout** [#12096](https://github.com/langfuse/langfuse/pull/12096) - Self-hosters can tune Redis cluster behavior for their infrastructure. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Log MOVED cluster redirects at debug level** [#12086](https://github.com/langfuse/langfuse/pull/12086) - Normal Redis Cluster behavior no longer generates misleading warnings. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Retire parseIoAsJson option with 400 response** [#11990](https://github.com/langfuse/langfuse/pull/11990) - Deprecated API option now returns explicit error guiding users to v2 path. (Author: [@sumerman](https://github.com/sumerman/))
+- **Shift to events\_full and events\_core tables** [#11836](https://github.com/langfuse/langfuse/pull/11836) - Major ClickHouse table reorganization splits lightweight and full-content queries. (Author: [@Steffen911](https://github.com/Steffen911/))
+
+### Internal Changes
+
+- **EventsSessionAggregationQueryBuilder for single-step aggregation** [#12127](https://github.com/langfuse/langfuse/pull/12127) - Replaces two-step aggregation with direct session GROUP BY on events\_core. (Author: [@sumerman](https://github.com/sumerman/))
+- **Add metricsVersion prop to dashboard components** [#12089](https://github.com/langfuse/langfuse/pull/12089) - Enables selective routing of widgets to v2 queries. (Author: [@sumerman](https://github.com/sumerman/))
+- **Remove 100 observation limit per trace** [#12048](https://github.com/langfuse/langfuse/pull/12048) - Detail views now retrieve unlimited observations through tRPC. (Author: [@nimarb](https://github.com/nimarb/))
+- **Remove shadow optimization test** [#12066](https://github.com/langfuse/langfuse/pull/12066) - Cleans up legacy test code. (Author: [@sumerman](https://github.com/sumerman/))
+- **Tighten v1/v2 view differences** [#12065](https://github.com/langfuse/langfuse/pull/12065) - Reduces inconsistencies between legacy and new query paths. (Author: [@sumerman](https://github.com/sumerman/))
+- **Support parent observation is null filter** [#12063](https://github.com/langfuse/langfuse/pull/12063) - Evaluation filters can now target root observations. (Author: [@marliessophie](https://github.com/marliessophie/))
+- **Support tool calls and filtering in events table** [#12151](https://github.com/langfuse/langfuse/pull/12151) - Events table infrastructure extends to handle tool call observations. (Author: [@nimarb](https://github.com/nimarb/))
+- **Add comments filters for events table** [#12163](https://github.com/langfuse/langfuse/pull/12163) - Filter infrastructure prepared for comment-based segmentation. (Author: [@nimarb](https://github.com/nimarb/))
+- **Move root observation switch to sidebar** [#12094](https://github.com/langfuse/langfuse/pull/12094) - UI reorganizes filter controls for better accessibility. (Author: [@nimarb](https://github.com/nimarb/))
+- **Update null check for empty strings** [#12123](https://github.com/langfuse/langfuse/pull/12123) - Filter service handles blank values correctly. (Author: [@marliessophie](https://github.com/marliessophie/))
+- **Add v4 view of scores via metrics query** [#12124](https://github.com/langfuse/langfuse/pull/12124) - Scores now accessible through new event metrics path. (Author: [@nimarb](https://github.com/nimarb/))
+
+### Testing
+
+- **Add dashboard v1/v2 consistency tests** [#12098](https://github.com/langfuse/langfuse/pull/12098) - Comprehensive metrics validation between legacy and new paths. (Author: [@sumerman](https://github.com/sumerman/))
+- **Fix e2e test flakiness** [#12114](https://github.com/langfuse/langfuse/pull/12114) - Move tests to async patterns. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+
+### Documentation & Chores
+
+- **Add Claude Sonnet 4.6 model pricing** [#12080](https://github.com/langfuse/langfuse/pull/12080) - Model catalog updated with latest Anthropic offerings. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **Add Gemini 3.1 Pro Preview pricing** [#12143](https://github.com/langfuse/langfuse/pull/12143) - Supports both standard and large-context pricing tiers. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **LangChain v1 upgrade** [#12085](https://github.com/langfuse/langfuse/pull/12085) - SDK compatibility updated. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **Add Vercel React skills** [#12103](https://github.com/langfuse/langfuse/pull/12103) - Developer experience tooling expanded. (Author: [@nimarb](https://github.com/nimarb/))
+- **Improve events table error messages** [#12111](https://github.com/langfuse/langfuse/pull/12111) - Clearer diagnostic output for debugging. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+- **Remove tremor-based charts dependency** [#12010](https://github.com/langfuse/langfuse/pull/12010) - Simplifies dependencies and reduces bundle size. (Author: [@coffee4tw](https://github.com/coffee4tw/))
+- **Move peek view out of data table** [#12099](https://github.com/langfuse/langfuse/pull/12099) - Architectural separation improves code maintainability. (Author: [@nimarb](https://github.com/nimarb/))
+- **Update events seed logic for production parity** [#12095](https://github.com/langfuse/langfuse/pull/12095) - Dev environment more accurately reflects production data patterns. (Author: [@sumerman](https://github.com/sumerman/))
+- **Bar chart styling and dark mode improvements** [#12045](https://github.com/langfuse/langfuse/pull/12045) - Enhanced hover states and dynamic label spacing. (Author: [@coffee4tw](https://github.com/coffee4tw/))
+- **Rename post in trace filter** [#12171](https://github.com/langfuse/langfuse/pull/12171) - Terminology updates for clarity. (Author: [@nimarb](https://github.com/nimarb/))
+- **Remove unused imports** [#12126](https://github.com/langfuse/langfuse/pull/12126) - Code cleanup. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+- **Bump turbo to 2.8.10** [#12116](https://github.com/langfuse/langfuse/pull/12116) - Build tool updates. (Author: [@nimarb](https://github.com/nimarb/))
+- **Remove replica sync and extend event prop delay to 30min** [#12167](https://github.com/langfuse/langfuse/pull/12167) - Operational tuning for event propagation. (Author: [@Steffen911](https://github.com/Steffen911/))

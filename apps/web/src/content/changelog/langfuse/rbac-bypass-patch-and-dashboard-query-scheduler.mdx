@@ -1,0 +1,102 @@
+---
+title: "Langfuse Changelog - February 21-28, 2026"
+date: "2026-02-28"
+description: "Langfuse patched a prototype-chain RBAC bypass, fixed self-hosted signup role assignment, added dashboard query scheduling to control backend load, and introduced stronger typing for Observations V2 API responses."
+---
+
+This week brought four critical improvements across security, authentication, and dashboard performance. The most significant change fixes a privilege escalation vulnerability in RBAC logic, while a separate authentication fix ensures newly created users retain proper project access on self-hosted instances. Dashboard query scheduling is now active to prevent backend concurrency issues, and developers using the Observations V2 API will get proper type hints in their IDEs instead of loose `Record<string, unknown>` types.
+
+## Highlights
+
+### Prototype-chain RBAC bypass patch
+
+A vulnerability in the `hasOrganizationAccess` and `hasProjectAccess` checks allowed attackers to poison the JavaScript prototype chain and escalate privileges. The fix ensures only own properties are evaluated in role checks, blocking prototype-chain attacks. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+
+### Fixed project membership role downgrades on signup
+
+New users on self-hosted instances were being incorrectly downgraded from OWNER to VIEWER at the project level, preventing API key management and other owner actions. The fix respects the rbac-project-roles entitlement and ensures proper role assignment during initialization. (Author: [@Steffen911](https://github.com/Steffen911/))
+
+### Dashboard query scheduler reduces backend load
+
+Uncontrolled concurrent dashboard queries were overloading the backend. A new query scheduler now limits concurrent queries based on time range, prioritizing interactive loads and preventing query pile-ups during slow periods. (Author: [@nimarb](https://github.com/nimarb/))
+
+### Typed Observations API for better IDE support
+
+The Observations V2 response data field now has proper TypeScript types instead of `Record<string, unknown>`. SDK users get autocomplete and catch type errors at build time rather than runtime. (Author: [@sumerman](https://github.com/sumerman/))
+
+### ClickHouse query optimization with bloom filters
+
+Added bloom filter indexes on model names and enabled cache prewarming in events tables to speed up common filter operations. (Author: [@sumerman](https://github.com/sumerman/))
+
+## More Updates
+
+### Security
+
+- **Block AWS metadata IPv6 endpoint** [#12296](https://github.com/langfuse/langfuse/pull/12296) - Webhook outbound requests now block the AWS metadata service IPv6 endpoint to prevent instance metadata disclosure. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+
+### Bug Fixes
+
+- **Fixed events table position-in-trace calculation** [#12329](https://github.com/langfuse/langfuse/pull/12329) - Refactored trace position queries to read from events\_core for accurate row ordering. (Author: [@nimarb](https://github.com/nimarb/))
+- **Fixed evaluation automation column resolution** [#12269](https://github.com/langfuse/langfuse/pull/12269) - Added missing observation columns to CTE to prevent ClickHouse errors when eval automations filter on latency, cost, or token usage fields. (Author: [@sumerman](https://github.com/sumerman/))
+- **Fixed dashboard Trace Name filtering** [#12298](https://github.com/langfuse/langfuse/pull/12298) - Corrected filtering on aggregated trace names to use HAVING clause instead of falling through to observation-level filters. (Author: [@sumerman](https://github.com/sumerman/))
+- **Fixed default widget view selection in V4 beta** [#12297](https://github.com/langfuse/langfuse/pull/12297) - New dashboard widgets respect V4 beta settings on creation instead of defaulting to v2. (Author: [@Copilot](https://github.com/Copilot/))
+- **Fixed empty arrayOptions URL roundtrip** [#12229](https://github.com/langfuse/langfuse/pull/12229) - Correct decoding of empty array filters when sharing filtered dashboard URLs. (Author: [@gnsals0904](https://github.com/gnsals0904/))
+- **Fixed traces view for rootless traces** [#12307](https://github.com/langfuse/langfuse/pull/12307) - Improved visibility of projects with orphaned observations by adjusting trace view to show more relevant data. (Author: [@sumerman](https://github.com/sumerman/))
+- **Fixed inline eval filter state remount** [#12255](https://github.com/langfuse/langfuse/pull/12255) - Prevent eval filter state from stale closures when changing filter targets. (Author: [@marliessophie](https://github.com/marliessophie/))
+- **Re-added user and session metrics to V4 dashboard** [#12317](https://github.com/langfuse/langfuse/pull/12317) - V4 dashboard queries now include uniqueUserIds and uniqueSessionIds calculations. (Author: [@sumerman](https://github.com/sumerman/))
+- **Fixed cost and usage queries missing version parameter** [#12235](https://github.com/langfuse/langfuse/pull/12235) - ModelUsageChart now passes metricsVersion prop so cost queries use fast v2 path instead of legacy observations table. (Author: [@sumerman](https://github.com/sumerman/))
+- **Docker Redis named volume support** [#12258](https://github.com/langfuse/langfuse/pull/12258) - Docker Compose now creates a named volume for Redis instead of anonymous volumes, preventing clutter on repeated starts. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Prisma migration schema compatibility** [#12209](https://github.com/langfuse/langfuse/pull/12209) - Made pending\_deletions index migration work with custom PostgreSQL schemas by removing hardcoded schema prefixes. (Author: [@sumerman](https://github.com/sumerman/))
+- **Fixed model prices Claude version handling** [#12219](https://github.com/langfuse/langfuse/pull/12219) - Made Claude version identifier optional in price calculations. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **Google adapter thinking config pass-through** [#12211](https://github.com/langfuse/langfuse/pull/12211) - LLM connections now allow passing thinking config for Google adapters via provider options. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **OpenTelemetry event timestamp defaults** [#12200](https://github.com/langfuse/langfuse/pull/12200) - Add default timestamps for OpenTelemetry events when not provided. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+- **Fixed eval V4 beta hook destructuring** [#12214](https://github.com/langfuse/langfuse/pull/12214) - Correct unpacking of V4 beta context in eval components. (Author: [@marliessophie](https://github.com/marliessophie/))
+- **Fixed arrayOptions checkbox filter matching** [#12206](https://github.com/langfuse/langfuse/pull/12206) - Use positive matching logic for arrayOptions filters to improve consistency. (Author: [@gnsals0904](https://github.com/gnsals0904/))
+
+### Features & Enhancements
+
+- **Multi-tenant SSO token endpoint auth method override** [#12270](https://github.com/langfuse/langfuse/pull/12270) - Supports tokenEndpointAuthMethod field in multi-tenant SSO configs to match static provider capabilities, enabling client\_secret\_post and other OAuth methods. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Webhook payloads include triggering user info** [#12074](https://github.com/langfuse/langfuse/pull/12074) - Webhook and GitHub dispatch events now include optional user field with triggering user's id, name, and email for audit and integration workflows. (Author: [@rushabhvaria](https://github.com/rushabhvaria/))
+- **Dashboard widget definition versioning** [#12239](https://github.com/langfuse/langfuse/pull/12239) - Track and validate widget definition versions for dashboard backwards compatibility and migration support. (Author: [@sumerman](https://github.com/sumerman/))
+- **ClickHouse Cloud sign-in provider** [#12115](https://github.com/langfuse/langfuse/pull/12115) - Added dedicated ClickHouse Cloud auth provider for Langfuse Cloud deployments with custom branding. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Extended thinking support in playground and evals** [#12233](https://github.com/langfuse/langfuse/pull/12233) - Playground and evaluation UI now handle model thinking blocks for models that use extended thinking. (Author: [@nimarb](https://github.com/nimarb/))
+- **Pydantic root span input/output mapping** [#12068](https://github.com/langfuse/langfuse/pull/12068) - UI traces now map Pydantic input/output data to the root span for clearer visibility. (Author: [@jannikmaierhoefer](https://github.com/jannikmaierhoefer/))
+- **Trace table hover data display** [#12237](https://github.com/langfuse/langfuse/pull/12237) - Show full trace data on hover even when row height is compact for better readability. (Author: [@aditya-mitra](https://github.com/aditya-mitra/))
+- **Eval automations show evaluation prompt on hover** [#12208](https://github.com/langfuse/langfuse/pull/12208) - Evaluators now display the evaluation prompt template on hover for quick reference and debugging. (Author: [@aditya-mitra](https://github.com/aditya-mitra/))
+- **LiveKit trace attribute parsing** [#10771](https://github.com/langfuse/langfuse/pull/10771) - OpenTelemetry spans from LiveKit are now parsed and displayed with proper trace tree hierarchy. (Author: [@jannikmaierhoefer](https://github.com/jannikmaierhoefer/))
+- **Experiments feature pages with admin checks** [#12064](https://github.com/langfuse/langfuse/pull/12064) - Gated experiments feature for Langfuse Cloud admins with routing and permission validation. (Author: [@marliessophie](https://github.com/marliessophie/))
+- **API scores return execution trace ID** [#12254](https://github.com/langfuse/langfuse/pull/12254) - Evaluation API responses now include the execution trace ID for easier tracking and correlation. (Author: [@hassiebp](https://github.com/hassiebp/))
+
+### Performance Improvements
+
+- **ClickHouse query condition caching** [#12251](https://github.com/langfuse/langfuse/pull/12251) - Enable query condition cache for analytics queries to reduce duplicated processing. (Author: [@sumerman](https://github.com/sumerman/))
+- **Event property scan optimization** [#12221](https://github.com/langfuse/langfuse/pull/12221) - Reduce ClickHouse scan size for event property filters by using GREATEST function instead of OR chains. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Environment filter caching re-enabled** [#12286](https://github.com/langfuse/langfuse/pull/12286) - Re-enable environment filter caching to improve query performance. (Author: [@nimarb](https://github.com/nimarb/))
+- **Dual write parallelization** [#12225](https://github.com/langfuse/langfuse/pull/12225) - Speed up event ingestion by parallelizing inserts across storage backends. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Optimized trace position calculation** [#12137](https://github.com/langfuse/langfuse/pull/12137) - Refactored events table scores query to use flat queries instead of heavy aggregation for faster filtering and display. (Author: [@nimarb](https://github.com/nimarb/))
+
+### Documentation
+
+- **Observation-level evals positioning** [#12293](https://github.com/langfuse/langfuse/pull/12293) - Updated docs to position observation-level evals as the preferred evaluation strategy. (Author: [@marliessophie](https://github.com/marliessophie/))
+- **Agent framework integration guide** [#12243](https://github.com/langfuse/langfuse/pull/12243) - Updated agents.md integration documentation. (Author: [@nimarb](https://github.com/nimarb/))
+
+### Infrastructure
+
+- **Docker build image turbo version pinning** [#12265](https://github.com/langfuse/langfuse/pull/12265) - Pin turbo version in Docker build images to ensure consistent builds. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+- **DataDog observability enhancement** [#12091](https://github.com/langfuse/langfuse/pull/12091) - Enhanced DataDog spans with HTTP status code tracing. (Author: [@coffee4tw](https://github.com/coffee4tw/))
+- **Cloud release script** [#12312](https://github.com/langfuse/langfuse/pull/12312) - Added release script for cloud deployments. (Author: [@hassiebp](https://github.com/hassiebp/))
+
+### Internal Changes
+
+- **Bcrypt timing consistency** [#12321](https://github.com/langfuse/langfuse/pull/12321) - Equalize bcrypt computation time on invalid credential paths to prevent timing attacks. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+- **Secondary eval execution queue** [#12252](https://github.com/langfuse/langfuse/pull/12252) - Introduced secondary evaluation queue for improved workload distribution. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+- **Admin access webhook dispatch** [#12207](https://github.com/langfuse/langfuse/pull/12207) - Send webhooks for admin access events to improve audit trails. (Author: [@maxdeichmann](https://github.com/maxdeichmann/))
+- **React resizable panels upgrade** [#12238](https://github.com/langfuse/langfuse/pull/12238) - Updated layout library to v4 with sticky layout fixes. (Author: [@nimarb](https://github.com/nimarb/))
+- **Fern SDK version upgrades** [#11267](https://github.com/langfuse/langfuse/pull/11267) - Updated Fern API generation tool for SDK generation. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **Fernapi package update** [#12256](https://github.com/langfuse/langfuse/pull/12256) - Updated fernapi dependency. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Trace data propagation window** [#12191](https://github.com/langfuse/langfuse/pull/12191) - Restrict trace data propagation to recent data only. (Author: [@Steffen911](https://github.com/Steffen911/))
+- **Event table score display** [#12264](https://github.com/langfuse/langfuse/pull/12264) - Added score columns to events table UI. (Author: [@nimarb](https://github.com/nimarb/))
+- **Billing page copy update** [#12314](https://github.com/langfuse/langfuse/pull/12314) - Adjusted wording on billing pages. (Author: [@jannikmaierhoefer](https://github.com/jannikmaierhoefer/))
+- **V4 UI beta banner** [#12266](https://github.com/langfuse/langfuse/pull/12266) - Added notification banner for V4 dashboard beta users. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **UI banner styling** [#12283](https://github.com/langfuse/langfuse/pull/12283) - Fine-tuned V4 banner spacing. (Author: [@hassiebp](https://github.com/hassiebp/))
+- **Anthropic adapter headers support** [#12284](https://github.com/langfuse/langfuse/pull/12284) - Allow custom headers in Anthropic LLM adapter configuration. (Author: [@hassiebp](https://github.com/hassiebp/))
