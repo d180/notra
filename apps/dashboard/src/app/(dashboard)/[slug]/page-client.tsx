@@ -6,11 +6,26 @@ import { ContentActivityCard } from "@/components/dashboard/content-activity-car
 import { EmptyState } from "@/components/empty-state";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { authClient } from "@/lib/auth/client";
 import { useTodayPosts } from "@/lib/hooks/use-posts";
 import type { ContentType, PostStatus } from "@/schemas/content";
 
 interface PageClientProps {
   organizationSlug: string;
+}
+
+function getGreeting(now: Date): string {
+  const hour = now.getHours();
+
+  if (hour < 12) {
+    return "Good morning";
+  }
+
+  if (hour < 18) {
+    return "Good afternoon";
+  }
+
+  return "Good evening";
 }
 
 function getPreview(markdown: string): string {
@@ -37,7 +52,11 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
       : orgFromList;
   const organizationId = organization?.id ?? "";
   const skeletonId = useId();
+  const { data: session } = authClient.useSession();
   const { data, isPending } = useTodayPosts(organizationId);
+  const greeting = getGreeting(new Date());
+  const userName = session?.user?.name?.trim();
+  const greetingText = userName ? `${greeting}, ${userName}!` : `${greeting}!`;
   const posts = data?.pages.flatMap((page) => page.posts) ?? [];
   const previewPosts = posts.slice(0, 3);
   const todayContent = (() => {
@@ -88,7 +107,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
     <PageContainer className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
       <div className="w-full space-y-6 px-4 lg:px-6">
         <div className="space-y-1">
-          <h1 className="font-bold text-3xl tracking-tight">Welcome!</h1>
+          <h1 className="font-bold text-3xl tracking-tight">{greetingText}</h1>
         </div>
 
         <section className="space-y-4">
