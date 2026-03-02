@@ -209,9 +209,14 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                 <TooltipTrigger
                   render={
                     <Button
+                      className={
+                        viewMode === "grid"
+                          ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                          : undefined
+                      }
                       onClick={() => setViewMode("grid")}
                       size="icon-sm"
-                      variant={viewMode === "grid" ? "secondary" : "outline"}
+                      variant="outline"
                     >
                       <LayoutGrid className="size-4" />
                     </Button>
@@ -223,9 +228,14 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
                 <TooltipTrigger
                   render={
                     <Button
+                      className={
+                        viewMode === "table"
+                          ? "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                          : undefined
+                      }
                       onClick={() => setViewMode("table")}
                       size="icon-sm"
-                      variant={viewMode === "table" ? "secondary" : "outline"}
+                      variant="outline"
                     >
                       <List className="size-4" />
                     </Button>
