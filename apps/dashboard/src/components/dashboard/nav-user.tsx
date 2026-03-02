@@ -53,7 +53,7 @@ export function NavUser() {
   const user = session?.user;
   const slug = activeOrganization?.slug ?? "";
 
-  useHotkey("m", toggleTheme);
+  useHotkey("M", toggleTheme);
 
   useEffect(() => {
     if (!(user || isPending || isRedirecting)) {

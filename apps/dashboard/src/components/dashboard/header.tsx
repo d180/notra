@@ -33,7 +33,7 @@ export function SiteHeader() {
     })();
   }, []);
 
-  useHotkey("c", () => {
+  useHotkey("C", () => {
     const btn = document.querySelector<HTMLButtonElement>(
       '[data-cal-namespace="15min"]'
     );
