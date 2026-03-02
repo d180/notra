@@ -33,7 +33,7 @@ export function SiteHeader() {
     })();
   }, []);
 
-  useHotkey("f", () => {
+  useHotkey("c", () => {
     const btn = document.querySelector<HTMLButtonElement>(
       '[data-cal-namespace="15min"]'
     );
@@ -97,7 +97,7 @@ export function SiteHeader() {
           <HugeiconsIcon icon={Calendar03Icon} size={16} />
           Book a Call
           <kbd className="pointer-events-none ml-1 hidden select-none rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-muted-foreground text-xs sm:inline-block">
-            F
+            C
           </kbd>
         </Button>
       </div>
