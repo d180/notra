@@ -100,7 +100,6 @@ export const organizations = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull().unique(),
     logo: text("logo"),
-    websiteUrl: text("website_url"),
     createdAt: timestamp("created_at").notNull(),
     metadata: text("metadata"),
     onboardingCompleted: boolean("onboarding_completed")
@@ -261,7 +260,7 @@ export const brandSettings = pgTable(
       .references(() => organizations.id, { onDelete: "cascade" }),
     name: text("name").notNull().default("Default"),
     isDefault: boolean("is_default").notNull().default(true),
-    websiteUrl: text("website_url"),
+    websiteUrl: text("website_url").notNull(),
     companyName: text("company_name"),
     companyDescription: text("company_description"),
     toneProfile: text("tone_profile"),

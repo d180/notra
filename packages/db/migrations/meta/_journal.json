@@ -99,6 +99,13 @@
       "when": 1772567619700,
       "tag": "0013_empty_jack_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1772568837533,
+      "tag": "0014_flat_dark_beast",
+      "breakpoints": true
     }
   ]
 }
