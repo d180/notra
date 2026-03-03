@@ -10,6 +10,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@notra/ui/components/ui/tooltip";
+import { truncateText } from "@/utils/format";
+import { IDENTITY_NAME_MAX_LENGTH } from "../constants/brand-identity";
 import type { VoiceSelectorProps } from "../types/brand-identity";
 import {
   getBrandFaviconUrl,
@@ -43,7 +45,7 @@ export function VoiceSelector({
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
               <span className="block truncate font-medium text-sm leading-tight">
-                {voice.name}
+                {truncateText(voice.name, IDENTITY_NAME_MAX_LENGTH)}
               </span>
               {(voice.toneProfile || voice.isDefault) && (
                 <Tooltip>

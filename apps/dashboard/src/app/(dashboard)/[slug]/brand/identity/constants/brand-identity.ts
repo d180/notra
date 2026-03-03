@@ -19,3 +19,5 @@ export const TONE_OPTIONS: { value: ToneProfile; label: string }[] = [
 export const LANGUAGE_OPTIONS = SUPPORTED_LANGUAGES;
 
 export const FULL_URL_REGEX = /^https?:\/\//i;
+
+export const IDENTITY_NAME_MAX_LENGTH = 13;
