@@ -42,13 +42,14 @@ const nextConfig: NextConfig = {
   async headers() {
     const cspDirectives = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' cal.com databuddy.cc *.databuddy.cc",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' cal.com app.cal.com va.vercel-scripts.com databuddy.cc *.databuddy.cc",
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self'",
       [
         "img-src 'self' data: blob:",
         "api.dicebear.com",
         "icons.duckduckgo.com",
+        "avatars.githubusercontent.com",
         "databuddy.cc",
         "*.databuddy.cc",
         process.env.CLOUDFLARE_PUBLIC_URL
