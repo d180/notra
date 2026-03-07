@@ -59,7 +59,7 @@ const nextConfig: NextConfig = {
         .filter(Boolean)
         .join(" "),
       "connect-src 'self' databuddy.cc *.databuddy.cc",
-      "frame-src 'self' cal.com",
+      "frame-src 'self' cal.com app.cal.com",
       "frame-ancestors 'none'",
       "object-src 'none'",
       "base-uri 'self'",
