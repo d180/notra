@@ -440,7 +440,7 @@ export default function BillingPage() {
                       <h2 className="font-semibold text-lg">Plans</h2>
                       <p className="text-muted-foreground text-sm">
                         Upgrade or change your plan. Pro includes a 3 day free
-                        trial.
+                        trial
                       </p>
                     </div>
                     <Tabs

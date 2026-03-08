@@ -222,7 +222,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
             <h1 className="font-bold text-3xl tracking-tight">Events</h1>
             <p className="text-muted-foreground">
               React to GitHub activity and trigger content generation
-              automatically.
+              automatically
             </p>
           </div>
           <AddTriggerDialog
