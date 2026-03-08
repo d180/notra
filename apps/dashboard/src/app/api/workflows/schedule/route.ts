@@ -25,6 +25,11 @@ import {
   sendScheduledContentCreatedEmail,
   sendScheduledContentFailedEmail,
 } from "@/lib/email/send";
+import {
+  addActiveGeneration,
+  completeActiveGeneration,
+  generateRunId,
+} from "@/lib/generations/tracking";
 import { getBaseUrl, triggerScheduleNow } from "@/lib/triggers/qstash";
 import { appendWebhookLog } from "@/lib/webhooks/logging";
 import { generateScheduledContent } from "@/lib/workflows/schedule/handlers";
@@ -315,6 +320,20 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
       return;
     }
 
+    const runId = await context.run("generate-run-id", () =>
+      generateRunId(triggerId)
+    );
+
+    await context.run("track-generation-start", async () => {
+      await addActiveGeneration(trigger.organizationId, {
+        runId,
+        triggerId: trigger.id,
+        outputType: trigger.outputType,
+        triggerName: trigger.name.trim() || trigger.outputType,
+        startedAt: new Date().toISOString(),
+      });
+    });
+
     // Step 3: Generate content based on output type
     try {
       const contentResult = await context.run<ContentGenerationResult>(
@@ -379,6 +398,18 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
       );
 
       if (contentResult.status === "rate_limited") {
+        await context.run("track-generation-end-rate-limit", async () => {
+          await completeActiveGeneration(trigger.organizationId, {
+            runId,
+            triggerId,
+            outputType: trigger.outputType,
+            triggerName: trigger.name.trim() || trigger.outputType,
+            status: "failed",
+            reason: "GitHub API rate limit hit, will retry",
+            completedAt: new Date().toISOString(),
+          });
+        });
+
         const autumnClient = autumn;
         if (aiCreditReservation.reserved && autumnClient) {
           await context.run("refund-ai-credit-after-rate-limit", async () => {
@@ -421,6 +452,18 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
       }
 
       if (contentResult.status === "unsupported_output_type") {
+        await context.run("track-generation-end-unsupported", async () => {
+          await completeActiveGeneration(trigger.organizationId, {
+            runId,
+            triggerId,
+            outputType: trigger.outputType,
+            triggerName: trigger.name.trim() || trigger.outputType,
+            status: "failed",
+            reason: "Unsupported output type",
+            completedAt: new Date().toISOString(),
+          });
+        });
+
         const autumnClient = autumn;
         if (aiCreditReservation.reserved && autumnClient) {
           await context.run(
@@ -485,6 +528,18 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
         console.error(
           `[Schedule] Content generation failed for trigger ${triggerId}: ${contentResult.reason}`
         );
+
+        await context.run("track-generation-end-failure", async () => {
+          await completeActiveGeneration(trigger.organizationId, {
+            runId,
+            triggerId,
+            outputType: trigger.outputType,
+            triggerName: trigger.name.trim() || trigger.outputType,
+            status: "failed",
+            reason: contentResult.reason,
+            completedAt: new Date().toISOString(),
+          });
+        });
 
         await context.run("log-generation-failure", async () => {
           await appendWebhookLog({
@@ -603,6 +658,18 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
       }
 
       const { postId, title: contentTitle } = contentResult;
+
+      await context.run("track-generation-end-success", async () => {
+        await completeActiveGeneration(trigger.organizationId, {
+          runId,
+          triggerId,
+          outputType: trigger.outputType,
+          triggerName: trigger.name.trim() || trigger.outputType,
+          status: "success",
+          title: contentTitle,
+          completedAt: new Date().toISOString(),
+        });
+      });
 
       await context.run("log-generation-success", async () => {
         await appendWebhookLog({
@@ -733,6 +800,18 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
       if (error instanceof WorkflowAbort) {
         throw error;
       }
+
+      await context.run("track-generation-end-error", async () => {
+        await completeActiveGeneration(trigger.organizationId, {
+          runId,
+          triggerId,
+          outputType: trigger.outputType,
+          triggerName: trigger.name.trim() || trigger.outputType,
+          status: "failed",
+          reason: "Unexpected workflow error",
+          completedAt: new Date().toISOString(),
+        });
+      });
 
       const autumnClient = autumn;
       if (aiCreditReservation.reserved && autumnClient) {
