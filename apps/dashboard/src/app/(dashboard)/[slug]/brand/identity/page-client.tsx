@@ -28,6 +28,7 @@ import {
   useAnalyzeBrand,
   useBrandAnalysisProgress,
   useBrandSettings,
+  useBrandVoiceAffectedTriggers,
   useDeleteBrandVoice,
   useSetDefaultBrandVoice,
 } from "../../../../../lib/hooks/use-brand-analysis";
@@ -88,6 +89,9 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
   );
   const [addIdentityOpen, setAddIdentityOpen] = useState(false);
   const [addReferenceOpen, setAddReferenceOpen] = useState(false);
+  const [deleteTargetVoiceId, setDeleteTargetVoiceId] = useState<string | null>(
+    null
+  );
   const [activeTab, setActiveTab] = useQueryState(
     "view",
     parseAsStringLiteral(TAB_VALUES).withDefault("identity")
@@ -97,6 +101,19 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
     voices.find((v) => v.id === activeVoiceId) ??
     voices.find((v) => v.isDefault) ??
     voices[0];
+
+  const deleteTargetVoice = deleteTargetVoiceId
+    ? voices.find((v) => v.id === deleteTargetVoiceId)
+    : null;
+
+  const { data: affectedData, isLoading: isLoadingAffected } =
+    useBrandVoiceAffectedTriggers(
+      organizationId,
+      deleteTargetVoiceId ?? "",
+      !!deleteTargetVoiceId &&
+        !!deleteTargetVoice &&
+        !deleteTargetVoice.isDefault
+    );
 
   const { data: referencesData } = useReferences(
     organizationId,
@@ -144,14 +161,30 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
     triggerAnalysis(voiceUrl, selectedVoice?.id);
 
   const handleDeleteVoice = async () => {
-    if (!selectedVoice || selectedVoice.isDefault) {
+    if (!deleteTargetVoice || deleteTargetVoice.isDefault) {
       return;
     }
 
     try {
-      await deleteVoiceMutation.mutateAsync(selectedVoice.id);
-      setActiveVoiceId(null);
-      toast.success("Brand identity deleted");
+      const result = await deleteVoiceMutation.mutateAsync(
+        deleteTargetVoice.id
+      );
+      if (activeVoiceId === deleteTargetVoice.id) {
+        setActiveVoiceId(null);
+      }
+      setDeleteTargetVoiceId(null);
+
+      const disabledCount =
+        (result.disabledSchedules?.length ?? 0) +
+        (result.disabledEvents?.length ?? 0);
+
+      if (disabledCount > 0) {
+        toast.success(
+          `Brand identity deleted. ${disabledCount} ${disabledCount === 1 ? "trigger was" : "triggers were"} disabled.`
+        );
+      } else {
+        toast.success("Brand identity deleted");
+      }
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -309,11 +342,21 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
 
         <VoiceSelector
           activeVoiceId={selectedVoice.id}
+          affectedEvents={affectedData?.affectedEvents ?? []}
+          affectedSchedules={affectedData?.affectedSchedules ?? []}
+          isDeleteDialogOpen={!!deleteTargetVoiceId}
           isDeleting={deleteVoiceMutation.isPending}
+          isLoadingAffected={isLoadingAffected}
           isReanalyzing={analyzeMutation.isPending}
           isSettingDefault={setDefaultMutation.isPending}
           onDelete={handleDeleteVoice}
+          onDeleteDialogChange={(open) => {
+            if (!open) {
+              setDeleteTargetVoiceId(null);
+            }
+          }}
           onReanalyze={handleReanalyze}
+          onRequestDelete={setDeleteTargetVoiceId}
           onSelect={setActiveVoiceId}
           onSetDefault={handleSetDefault}
           organizationId={organizationId}
