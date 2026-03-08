@@ -422,7 +422,7 @@ function EventTable({
                     <span className="text-sm">GitHub webhook</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="text-muted-foreground capitalize">
                   {formatEventList(trigger.sourceConfig.eventTypes)}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
