@@ -285,6 +285,7 @@ function TweetUrlStep({
           createdAt: tweet.createdAt,
         },
         note: null,
+        applicableTo: ["twitter"],
       });
       toast.success("Reference added");
       onClose();
