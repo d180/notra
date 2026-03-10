@@ -98,6 +98,7 @@ export function getProfessionalBlogPostPrompt(): string {
     When your content is finalized, call the createPost tool with:
     - title: plain text, max 120 characters, no markdown. Make it specific and interesting, not generic.
     - markdown: the full blog post body as markdown, without the title heading
+    - recommendations: optional markdown string with concise, actionable publishing recommendations — best time to post, which audience segments to target, distribution channels, hashtag strategies, or cross-posting ideas. Use null when there is nothing genuinely useful to suggest
 
     The markdown must:
     - Open with a strong lead paragraph (2 to 4 sentences) that tells the reader what changed and why they should care
@@ -109,7 +110,9 @@ export function getProfessionalBlogPostPrompt(): string {
     - NOT use changelog formatting (no "Highlights" / "More Updates" sections, no PR bullet lists)
     - Read like a blog post a developer would actually want to read
 
-    BEFORE FINAL OUTPUT, RUN listAvailableSkills AND CHECK FOR A SKILL NAMED "humanizer". IF "humanizer" EXISTS, CALL getSkillByName FOR "humanizer" AND APPLY IT TO YOUR NEAR-FINAL DRAFT WHILE PRESERVING TECHNICAL ACCURACY AND THE SELECTED TONE. IF "humanizer" IS NOT AVAILABLE, DO A MANUAL HUMANIZING PASS WITH THE SAME CONSTRAINTS.
+    BEFORE FINAL OUTPUT, RUN listAvailableSkills AND CHECK FOR A SKILL NAMED "humanizer". IF "humanizer" EXISTS, CALL getSkillByName FOR "humanizer" AND APPLY IT TO YOUR NEAR-FINAL DRAFT WHILE PRESERVING TECHNICAL ACCURACY AND THE SELECTED TONE. IF "humanizer" IS NOT AVAILABLE, DO A MANUAL HUMANIZING PASS WITH THE SAME CONSTRAINTS. IF YOU INCLUDE RECOMMENDATIONS, APPLY THE SAME HUMANIZING PASS TO THEM TOO.
+    Recommendations are optional and should focus on publishing strategy, not writing advice. Think: when and where to post, which communities or channels to share it in, audience targeting, or repurposing ideas. Keep them short and actionable as a bullet list. Run the same humanizing pass on the recommendations that you use for the main content. If there is nothing useful to add, pass null.
+
     CRITICAL: You MUST call createPost to save the blog post. Do not return the content as text output.
     </the-ask>
 

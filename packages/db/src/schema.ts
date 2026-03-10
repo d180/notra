@@ -397,6 +397,7 @@ export const posts = pgTable(
     title: text("title").notNull(),
     content: text("content").notNull(),
     markdown: text("markdown").notNull(),
+    recommendations: text("recommendations"),
     contentType: text("content_type").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     sourceMetadata: jsonb("source_metadata"),

@@ -93,6 +93,7 @@ export function getConversationalLinkedInPrompt(): string {
     When a post is finalized, call the createPost tool with:
     - title: A short internal title for this post (max 120 characters, not shown in the post)
     - markdown: The full LinkedIn post content (plain text with line breaks; lists allowed)
+    - recommendations: optional markdown string with concise, actionable publishing recommendations — best time to post, which audience segments to target, distribution channels, hashtag strategies, or cross-posting ideas. Use null when there is nothing genuinely useful to suggest
 
     The markdown must:
     - Follow the exact Hook -> Story -> Lesson -> Takeaway flow
@@ -101,6 +102,8 @@ export function getConversationalLinkedInPrompt(): string {
     - Stay near 800 characters
     - End with a clear takeaway line
     - Include no hashtags and no emojis
+
+    Recommendations are optional and should focus on publishing strategy, not writing advice. Think: when and where to post, which communities or channels to share it in, audience targeting, or repurposing ideas. Keep them short and actionable as a bullet list. Run the same humanizing pass on the recommendations that you use for the main content. If there is nothing useful to add, pass null.
 
     CRITICAL: You MUST call createPost for every finalized LinkedIn post you decide to create. Do not return the content as text output.
     </the-ask>

@@ -39,8 +39,15 @@ export function createCreatePostTool(
         .describe(
           "The full post content body as markdown/MDX, without the title heading"
         ),
+      recommendations: z
+        .string()
+        .nullable()
+        .optional()
+        .describe(
+          "Optional actionable publishing recommendations as markdown — best time to post, audience targeting, distribution channels, or cross-posting ideas"
+        ),
     }),
-    execute: async ({ title, markdown }) => {
+    execute: async ({ title, markdown, recommendations }) => {
       const id = nanoid();
       const content = sanitizeMarkdownHtml(await marked.parse(markdown));
       await db.insert(posts).values({
@@ -49,11 +56,16 @@ export function createCreatePostTool(
         title,
         content,
         markdown,
+        recommendations: recommendations ?? null,
         contentType,
         sourceMetadata: config.sourceMetadata ?? null,
       });
       result.posts ??= [];
-      result.posts.push({ postId: id, title });
+      result.posts.push({
+        postId: id,
+        title,
+        recommendations: recommendations ?? null,
+      });
       result.postId ??= id;
       result.title ??= title;
       return {
@@ -89,15 +101,25 @@ export function createUpdatePostTool(
         .string()
         .optional()
         .describe("Updated content body as markdown/MDX"),
+      recommendations: z
+        .string()
+        .nullable()
+        .optional()
+        .describe(
+          "Updated optional recommendations as markdown. Pass null to clear them."
+        ),
     }),
-    execute: async ({ postId, title, markdown }) => {
-      const updates: Record<string, string> = {};
+    execute: async ({ postId, title, markdown, recommendations }) => {
+      const updates: Record<string, string | null> = {};
       if (title !== undefined) {
         updates.title = title;
       }
       if (markdown !== undefined) {
         updates.content = sanitizeMarkdownHtml(await marked.parse(markdown));
         updates.markdown = markdown;
+      }
+      if (recommendations !== undefined) {
+        updates.recommendations = recommendations;
       }
 
       if (Object.keys(updates).length === 0) {
@@ -129,6 +151,15 @@ export function createUpdatePostTool(
 
         if (result.postId === postId) {
           result.title = title;
+        }
+      }
+
+      if (recommendations !== undefined) {
+        const existingPost = result.posts?.find(
+          (entry) => entry.postId === postId
+        );
+        if (existingPost) {
+          existingPost.recommendations = recommendations;
         }
       }
 
@@ -190,6 +221,7 @@ export function createViewPostTool(config: PostToolsConfig): Tool {
         postId: post.id,
         title: post.title,
         markdown: post.markdown,
+        recommendations: post.recommendations,
         contentType: post.contentType,
         createdAt: post.createdAt.toISOString(),
         updatedAt: post.updatedAt.toISOString(),

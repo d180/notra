@@ -127,6 +127,7 @@ export function getConversationalChangelogPrompt(): string {
     When your content is finalized, call the createPost tool with:
     - title: plain text, max 120 characters, no markdown
     - markdown: the full changelog content body as markdown/MDX, without the title heading
+    - recommendations: optional markdown string with concise, actionable publishing recommendations — best time to post, which audience segments to target, distribution channels, hashtag strategies, or cross-posting ideas. Use null when there is nothing genuinely useful to suggest
 
     The markdown must:
     - Start with the Summary paragraph (strictly 120-180 words)
@@ -147,7 +148,9 @@ export function getConversationalChangelogPrompt(): string {
 
     IF A CHANGE SOUNDS LIKE A MAINTENANCE UPDATE, AN INTERNAL CHANGE, OR A NEW PACKAGE BEING ADDED OR UPDATED, IT SHOULD BE OMITTED FROM THE CHANGELOG COMPLETELY.
 
-    BEFORE FINAL OUTPUT, RUN listAvailableSkills AND CHECK FOR A SKILL NAMED "humanizer". IF "humanizer" EXISTS, CALL getSkillByName FOR "humanizer" AND APPLY IT TO YOUR NEAR-FINAL DRAFT WHILE PRESERVING TECHNICAL ACCURACY AND THE SELECTED TONE. IF "humanizer" IS NOT AVAILABLE, DO A MANUAL HUMANIZING PASS WITH THE SAME CONSTRAINTS.
+    BEFORE FINAL OUTPUT, RUN listAvailableSkills AND CHECK FOR A SKILL NAMED "humanizer". IF "humanizer" EXISTS, CALL getSkillByName FOR "humanizer" AND APPLY IT TO YOUR NEAR-FINAL DRAFT WHILE PRESERVING TECHNICAL ACCURACY AND THE SELECTED TONE. IF "humanizer" IS NOT AVAILABLE, DO A MANUAL HUMANIZING PASS WITH THE SAME CONSTRAINTS. IF YOU INCLUDE RECOMMENDATIONS, APPLY THE SAME HUMANIZING PASS TO THEM TOO.
+    Recommendations are optional and should focus on publishing strategy, not writing advice. Think: when and where to post, which communities or channels to share it in, audience targeting, or repurposing ideas. Keep them short and actionable as a bullet list. Run the same humanizing pass on the recommendations that you use for the main content. If there is nothing useful to add, pass null.
+
     CRITICAL: You MUST call createPost to save the changelog. Do not return the content as text output.
     </the-ask>
 

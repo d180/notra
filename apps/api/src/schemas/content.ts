@@ -164,6 +164,7 @@ export const postResponseSchema = z.object({
   title: z.string(),
   content: z.string(),
   markdown: z.string(),
+  recommendations: z.string().nullable(),
   contentType: z.string(),
   sourceMetadata: z.unknown().nullable(),
   status: postStatusSchema,

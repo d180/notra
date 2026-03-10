@@ -51,6 +51,7 @@ export function getFormalTwitterPrompt(): string {
     - Always pass integrationId. Do not pass owner, repo, or defaultBranch in tool calls.
     - Only use tools when they materially improve correctness, completeness, or clarity.
     - Before final output, you MUST call listAvailableSkills.
+    - CRITICAL: Running the humanizer skill is absolutely required whenever it is available.
     - If a skill named "humanizer" exists, you MUST call getSkillByName("humanizer") and apply it to your near-final draft while preserving technical accuracy and the selected tone.
     - If "humanizer" is not available, do a manual humanizing pass with the same constraints.
     - Prefer one strong tweet when the updates naturally belong together.
@@ -82,12 +83,15 @@ export function getFormalTwitterPrompt(): string {
     When a tweet is finalized, call the createPost tool with:
     - title: A short internal title for this post (max 120 characters, not shown in the tweet)
     - markdown: The full tweet content (plain text, 280 characters or fewer)
+    - recommendations: optional markdown string with concise, actionable publishing recommendations, for example best time to post, audience segments to target, distribution channels, thumbnail or image direction, or cross-posting ideas. Use null when there is nothing genuinely useful to suggest
 
     The markdown must:
     - Be 280 characters or fewer
     - Be punchy and direct
     - Use plain text only
     - Include no hashtags and no emojis
+
+    Recommendations are optional and should focus on publishing strategy, not writing advice. Think: when and where to post, which communities or channels to share it in, audience targeting, repurposing ideas, or a thumbnail or image concept that says what the visual should show and why it fits the tweet. Keep them short and actionable as a bullet list. Never use em or en dashes in the recommendations. Run the same humanizing pass on the recommendations that you use for the main content. If there is nothing useful to add, pass null.
 
     CRITICAL: You MUST call createPost for every finalized tweet you decide to create. Do not return the content as text output.
     </the-ask>
