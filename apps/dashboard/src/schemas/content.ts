@@ -27,6 +27,13 @@ export const sourceMetadataSchema = z
     lookbackRange: z.object({ start: z.string(), end: z.string() }),
     brandVoiceName: z.string().optional(),
     brandVoiceId: z.string().optional(),
+    selectedCommitShas: z.array(z.string()).optional(),
+    selectedPullRequests: z
+      .array(z.object({ repositoryId: z.string(), number: z.number() }))
+      .optional(),
+    selectedReleases: z
+      .array(z.object({ repositoryId: z.string(), tagName: z.string() }))
+      .optional(),
   })
   .nullable()
   .optional();

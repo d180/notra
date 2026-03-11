@@ -202,6 +202,18 @@ export const { POST } = serve<OnDemandContentWorkflowPayload>(
             },
             brandVoiceName: brand?.name,
             brandVoiceId: brand?.id,
+            selectedCommitShas: selectedItems?.commitShas?.length
+              ? selectedItems.commitShas
+              : undefined,
+            selectedPullRequests: selectedItems?.pullRequestNumbers?.length
+              ? selectedItems.pullRequestNumbers
+              : undefined,
+            selectedReleases: selectedItems?.releaseTagNames?.length
+              ? selectedItems.releaseTagNames.filter(
+                  (item): item is { repositoryId: string; tagName: string } =>
+                    typeof item !== "string"
+                )
+              : undefined,
           };
 
           const sourceTargets = repositories

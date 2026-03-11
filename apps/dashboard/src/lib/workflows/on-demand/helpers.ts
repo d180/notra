@@ -194,7 +194,7 @@ export function buildSelectedItemsInstructions(
     return null;
   }
 
-  return `Selected items filter (IMPORTANT — only include content about these specific items, ignore all others):\n${parts.join("\n")}`;
+  return `Selected items filter (IMPORTANT — only include content about these specific items, ignore all others):\n${parts.join("\n")}\nNote: The PR numbers, commit SHAs, and release tags above are internal references for fetching data. Never include raw PR numbers (e.g. "PR 195"), commit SHAs, or release tags in titles. Its fine in the main content but EXCLUDE short form content like tweets or linkedin posts.`;
 }
 
 export function buildDataPointRestrictionInstructions(dataPoints: {
