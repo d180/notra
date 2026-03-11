@@ -153,7 +153,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       })),
       nextCursor,
     });
-  } catch(err) {
+  } catch (err) {
     console.log(err);
     return NextResponse.json(
       { error: "Failed to fetch posts" },
