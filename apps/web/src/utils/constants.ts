@@ -31,7 +31,7 @@ export const PRICING_PLANS = {
     description: "For growing teams that need more power.",
     pricing: { monthly: 50, annually: 500 },
     cta: {
-      label: "Start 7-day trial",
+      label: "Get started",
       href: "https://app.usenotra.com/signup",
     },
     features: [
