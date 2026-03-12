@@ -29,7 +29,7 @@ export const PRICING_PLANS = {
   pro: {
     name: "Pro",
     description: "For growing teams that need more power.",
-    pricing: { monthly: 29, annually: 24 },
+    pricing: { monthly: 50, annually: 500 },
     cta: {
       label: "Start 7-day trial",
       href: "https://app.usenotra.com/signup",
@@ -41,7 +41,6 @@ export const PRICING_PLANS = {
       "5 integrations",
       "100 references",
       "30 Days Log Retention",
-      "Analytics",
     ],
   },
   enterprise: {
@@ -56,7 +55,6 @@ export const PRICING_PLANS = {
       "Custom integrations",
       "Unlimited references",
       "Unlimited Log Retention",
-      "Advanced Analytics",
       "Dedicated Support",
     ],
   },
@@ -106,18 +104,6 @@ const FEATURES_TABLE = [
         free: "7 Days",
         pro: "30 Days",
         enterprise: "Unlimited",
-      },
-      {
-        name: "Analytics",
-        free: false,
-        pro: true,
-        enterprise: true,
-      },
-      {
-        name: "Advanced analytics",
-        free: false,
-        pro: false,
-        enterprise: true,
       },
     ],
   },
