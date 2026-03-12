@@ -39,6 +39,7 @@
     "@notra/ui": "workspace:*",
     "@octokit/core": "^7.0.6",
     "@openrouter/ai-sdk-provider": "^1.5.4",
+    "@opentelemetry/api-logs": "^0.213.0",
     "@respan/exporter-vercel": "^1.0.29",
     "@supermemory/tools": "^1.3.64",
     "@tailwindcss/typography": "^0.5.19",
