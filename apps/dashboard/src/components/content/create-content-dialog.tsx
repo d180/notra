@@ -8,6 +8,7 @@ import {
   ResponsiveDialogTitle,
   ResponsiveDialogTrigger,
 } from "@notra/ui/components/shared/responsive-dialog";
+import { Badge } from "@notra/ui/components/ui/badge";
 import { Button } from "@notra/ui/components/ui/button";
 import {
   Collapsible,
@@ -48,7 +49,6 @@ import { cn } from "@notra/ui/lib/utils";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-store";
-import { Badge } from "@notra/ui/components/ui/badge";
 import {
   Check,
   ChevronDown,
@@ -767,9 +767,15 @@ export function CreateContentDialog({
                   )}
                 </form.Field>
 
-                <Collapsible defaultOpen={false} onOpenChange={setDataSourcesOpen} open={dataSourcesOpen}>
+                <Collapsible
+                  defaultOpen={false}
+                  onOpenChange={setDataSourcesOpen}
+                  open={dataSourcesOpen}
+                >
                   <CollapsibleTrigger className="flex w-full items-center gap-2 font-medium text-sm">
-                    <ChevronDown className={`size-4 transition-transform ${dataSourcesOpen ? "" : "-rotate-90"}`} />
+                    <ChevronDown
+                      className={`size-4 transition-transform ${dataSourcesOpen ? "" : "-rotate-90"}`}
+                    />
                     Data Sources
                   </CollapsibleTrigger>
                   <CollapsibleContent className="mt-3 space-y-3">
