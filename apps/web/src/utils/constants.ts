@@ -40,7 +40,7 @@ export const PRICING_PLANS = {
       "Unlimited integrations",
       "30 Days Log Retention",
       "100 references",
-      "150 AI Credits",
+      "100 AI Credits",
     ],
   },
   enterprise: {
@@ -73,7 +73,7 @@ const FEATURES_TABLE = [
       {
         name: "AI Credits",
         free: "15 / month",
-        pro: "150 / month",
+        pro: "100 / month",
         enterprise: "Unlimited",
       },
     ],
