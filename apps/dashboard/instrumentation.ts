@@ -4,7 +4,7 @@ import { registerOTel } from "@vercel/otel";
 const apiKey = process.env.RESPAN_API_KEY;
 
 if (!apiKey) {
-  throw new Error("RESPAN_API_KEY is not set");
+  console.warn("RESPAN_API_KEY is not set");
 }
 
 export function register() {
@@ -14,6 +14,7 @@ export function register() {
         process.env.NODE_ENV === "development" ? "notra-dev" : "notra",
       traceExporter: new RespanExporter({
         apiKey,
+        debug: true,
       }),
     });
   }
