@@ -9,6 +9,7 @@ import DocumentationSection from "../components/documentation-section";
 import FAQSection from "../components/faq-section";
 import IntegrationOrbit from "../components/integration-orbit";
 import { PricingCards } from "../components/pricing-section";
+import ReferencesPreview from "../components/references-preview";
 import TestimonialsSection from "../components/testimonials-section";
 import { SOCIAL_PROOF_LOGOS } from "../utils/constants";
 
@@ -277,17 +278,15 @@ export default function LandingPage() {
               <div className="flex flex-col items-start justify-start gap-4 p-4 sm:gap-6 sm:p-6 md:p-8 lg:p-12">
                 <div className="flex flex-col gap-2">
                   <h3 className="font-sans font-semibold text-foreground text-lg leading-tight sm:text-xl">
-                    More to come
+                    Writing references
                   </h3>
                   <p className="font-normal font-sans text-muted-foreground text-sm leading-relaxed md:text-base">
-                    We're building new features every week. Stay tuned for
-                    what's next.
+                    Add tweets, posts, or custom text as references so the AI
+                    matches your real writing style.
                   </p>
                 </div>
-                <div className="flex h-50 w-full items-center justify-center sm:h-62.5 md:h-75">
-                  <span className="font-sans text-muted-foreground/50 text-sm">
-                    Coming soon
-                  </span>
+                <div className="w-full pt-2">
+                  <ReferencesPreview />
                 </div>
               </div>
             </div>
