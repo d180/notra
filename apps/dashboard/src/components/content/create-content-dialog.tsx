@@ -1,6 +1,17 @@
 "use client";
 
 import {
+  Add01Icon,
+  ArrowDown01Icon,
+  ArrowReloadHorizontalIcon,
+  GitCommitIcon,
+  GitPullRequestIcon,
+  Loading03Icon,
+  Rocket01Icon,
+  Tick01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
+import {
   ResponsiveDialog,
   ResponsiveDialogContent,
   ResponsiveDialogDescription,
@@ -49,16 +60,6 @@ import { cn } from "@notra/ui/lib/utils";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useStore } from "@tanstack/react-store";
-import {
-  Check,
-  ChevronDown,
-  GitCommitHorizontal,
-  GitPullRequest,
-  Loader2,
-  Plus,
-  Rocket,
-  RotateCw,
-} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -97,6 +98,13 @@ import {
   releaseSelectionToKey,
 } from "@/utils/content-preview";
 import { formatSnakeCaseLabel } from "@/utils/format";
+
+const EVENT_ICON: Record<EventType, typeof GitPullRequestIcon> = {
+  PR: GitPullRequestIcon,
+  Commit: GitCommitIcon,
+  Release: Rocket01Icon,
+};
+
 import { getOutputTypeLabel, OutputTypeIcon } from "@/utils/output-types";
 import { QUERY_KEYS } from "@/utils/query-keys";
 
@@ -165,18 +173,6 @@ export function CreateContentDialog({
       })),
     };
   }, [integrationsResponse]);
-
-  useEffect(() => {
-    if (open && repositories.length > 0) {
-      const ids = form.getFieldValue("repositoryIds");
-      if (ids.length === 0) {
-        form.setFieldValue(
-          "repositoryIds",
-          repositories.map((r) => r.id)
-        );
-      }
-    }
-  }, [open, repositories, form]);
 
   const repositoryIds = useStore(form.store, (s) => s.values.repositoryIds);
   const lookbackWindow = useStore(form.store, (s) => s.values.lookbackWindow);
@@ -607,7 +603,7 @@ export function CreateContentDialog({
       <ResponsiveDialogTrigger
         render={
           <Button disabled={!organizationId} size="sm">
-            <Plus className="size-4" />
+            <HugeiconsIcon className="size-4" icon={Add01Icon} />
             Create Content
           </Button>
         }
@@ -625,7 +621,7 @@ export function CreateContentDialog({
         </ResponsiveDialogHeader>
 
         <form
-          className="!px-0 flex min-h-0 flex-1 flex-col overflow-hidden"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden px-0!"
           onSubmit={(e) => e.preventDefault()}
         >
           {/* ── Step 1: Configure ── */}
@@ -773,8 +769,9 @@ export function CreateContentDialog({
                   open={dataSourcesOpen}
                 >
                   <CollapsibleTrigger className="flex w-full items-center gap-2 font-medium text-sm">
-                    <ChevronDown
+                    <HugeiconsIcon
                       className={`size-4 transition-transform ${dataSourcesOpen ? "" : "-rotate-90"}`}
+                      icon={ArrowDown01Icon}
                     />
                     Data Sources
                   </CollapsibleTrigger>
@@ -844,7 +841,10 @@ export function CreateContentDialog({
                       type="button"
                       variant="outline"
                     >
-                      <RotateCw className="size-3.5" />
+                      <HugeiconsIcon
+                        className="size-3.5"
+                        icon={ArrowReloadHorizontalIcon}
+                      />
                       Retry
                     </Button>
                   </div>
@@ -1051,7 +1051,10 @@ export function CreateContentDialog({
                 >
                   {mutation.isPending ? (
                     <>
-                      <Loader2 className="size-4 animate-spin" />
+                      <HugeiconsIcon
+                        className="size-4 animate-spin"
+                        icon={Loading03Icon}
+                      />
                       Generating...
                     </>
                   ) : (
@@ -1211,16 +1214,14 @@ function EventRow({
             : "border-muted-foreground/30"
         )}
       >
-        {selected && <Check className="size-3" />}
+        {selected && <HugeiconsIcon className="size-3" icon={Tick01Icon} />}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm">{label}</p>
         <p className="truncate text-muted-foreground text-xs">{meta}</p>
       </div>
       <Badge className={cn("shrink-0", EVENT_BADGE[type])}>
-        {type === "PR" && <GitPullRequest className="size-3!" />}
-        {type === "Commit" && <GitCommitHorizontal className="size-3!" />}
-        {type === "Release" && <Rocket className="size-3!" />}
+        <HugeiconsIcon className="size-3!" icon={EVENT_ICON[type]} />
         {type}
       </Badge>
     </button>
