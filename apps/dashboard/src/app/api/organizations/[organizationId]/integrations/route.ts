@@ -78,6 +78,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         { status: 409 }
       );
     }
+
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     return NextResponse.json(
       { error: "Failed to create integration" },
       { status: 500 }
