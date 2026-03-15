@@ -131,4 +131,31 @@ export const SHOWCASE_COMPANY_ICONS: Record<string, ReactNode> = {
       width={85}
     />
   ),
+  "assistant-ui": (
+    <Image
+      alt="assistant-ui"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/assistant-ui.svg"
+      width={85}
+    />
+  ),
+  cmux: (
+    <Image
+      alt="cmux"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/cmux.webp"
+      width={85}
+    />
+  ),
+  sim: (
+    <Image
+      alt="Sim"
+      className="h-5 w-auto rounded"
+      height={85}
+      src="/logos/brands/sim.webp"
+      width={85}
+    />
+  ),
 };

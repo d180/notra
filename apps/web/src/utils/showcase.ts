@@ -171,6 +171,33 @@ export const SHOWCASE_COMPANIES = [
     url: "https://airweave.ai",
     accentColor: "#6366F1",
   },
+  {
+    slug: "assistant-ui",
+    name: "Assistant UI",
+    domain: "assistant-ui.com",
+    description:
+      "Open-source React.js library for building AI chat interfaces across web, React Native, and terminal environments.",
+    url: "https://www.assistant-ui.com",
+    accentColor: "#111827",
+  },
+  {
+    slug: "cmux",
+    name: "cmux",
+    domain: "cmux.dev",
+    description:
+      "A terminal workspace app focused on fast multi-surface workflows, Claude integration, and customizable themes.",
+    url: "https://cmux.dev",
+    accentColor: "#0F172A",
+  },
+  {
+    slug: "sim",
+    name: "Sim",
+    domain: "sim.ai",
+    description:
+      "Open-source platform for building AI agent workflows with integrations, webhooks, and workflow automation.",
+    url: "https://www.sim.ai",
+    accentColor: "#2563EB",
+  },
 ] as const satisfies readonly ShowcaseCompany[];
 
 const MDX_EXTENSION_REGEX = /\.mdx$/;
