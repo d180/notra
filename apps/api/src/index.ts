@@ -4,6 +4,29 @@ import { trimTrailingSlash } from "hono/trailing-slash";
 import { authMiddleware } from "./middleware/auth";
 import { contentRoutes } from "./routes/content";
 
+const FRAMER_PLUGIN_ID = "8d4wmwtko6960jsu3ojmalvqm";
+
+const FRAMER_PLUGIN_ORIGIN_PATTERN = new RegExp(
+  `^https://${FRAMER_PLUGIN_ID}(-[a-zA-Z0-9]+)?\\.plugins\\.framercdn\\.com$`
+);
+
+const LOCAL_DEV_ORIGIN_PATTERN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
+function getAllowedOrigin(origin: string | undefined): string | null {
+  if (!origin) {
+    return null;
+  }
+
+  if (
+    FRAMER_PLUGIN_ORIGIN_PATTERN.test(origin) ||
+    LOCAL_DEV_ORIGIN_PATTERN.test(origin)
+  ) {
+    return origin;
+  }
+
+  return null;
+}
+
 interface Bindings {
   UNKEY_ROOT_KEY: string;
   DATABASE_URL: string;
@@ -17,6 +40,28 @@ interface AppEnv {
 }
 
 const app = new OpenAPIHono<AppEnv>({ strict: true });
+
+app.use("/v1/*", async (c, next) => {
+  const origin = c.req.header("origin");
+  const allowedOrigin = getAllowedOrigin(origin);
+
+  c.header("Vary", "Origin");
+
+  if (allowedOrigin) {
+    c.header("Access-Control-Allow-Origin", allowedOrigin);
+    c.header(
+      "Access-Control-Allow-Methods",
+      "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+    );
+    c.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  }
+
+  if (c.req.method === "OPTIONS") {
+    return c.body(null, 204);
+  }
+
+  await next();
+});
 
 app.use(trimTrailingSlash({ alwaysRedirect: true }));
 
