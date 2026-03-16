@@ -4,7 +4,7 @@ import { trimTrailingSlash } from "hono/trailing-slash";
 import { authMiddleware } from "./middleware/auth";
 import { contentRoutes } from "./routes/content";
 
-const FRAMER_PLUGIN_ID = "8dd854";
+const FRAMER_PLUGIN_ID = "8d4wmwtko6960jsu3ojmalvqm";
 
 const FRAMER_PLUGIN_ORIGIN_PATTERN = new RegExp(
   `^https://${FRAMER_PLUGIN_ID}(-[a-zA-Z0-9]+)?\\.plugins\\.framercdn\\.com$`
