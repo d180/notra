@@ -27,6 +27,7 @@ FROM deps AS builder
 
 # Copy source for all packages the API depends on
 COPY packages/typescript-config ./packages/typescript-config
+COPY packages/ai ./packages/ai
 COPY packages/db ./packages/db
 COPY apps/api ./apps/api
 
