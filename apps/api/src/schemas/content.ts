@@ -1,4 +1,8 @@
 import { z } from "@hono/zod-openapi";
+import {
+  LOOKBACK_WINDOWS,
+  SUPPORTED_CONTENT_GENERATION_TYPES,
+} from "@notra/content-generation/schemas";
 
 export const getPostsParamsSchema = z.object({});
 
@@ -125,6 +129,20 @@ export const getPostParamsSchema = z.object({
     }),
 });
 
+export const getBrandIdentityParamsSchema = z.object({
+  brandIdentityId: z
+    .string()
+    .trim()
+    .min(1, "brandIdentityId is required")
+    .openapi({
+      param: {
+        in: "path",
+        name: "brandIdentityId",
+      },
+      example: "51c2f3aa-efdd-4e28-8e69-23fa2dfd3561",
+    }),
+});
+
 export const errorResponseSchema = z
   .object({
     error: z.string(),
@@ -136,6 +154,20 @@ export const organizationResponseSchema = z.object({
   slug: z.string(),
   name: z.string(),
   logo: z.string().nullable(),
+});
+
+export const brandIdentityResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  isDefault: z.boolean(),
+});
+
+export const githubIntegrationResponseSchema = z.object({
+  id: z.string(),
+  displayName: z.string(),
+  owner: z.string().nullable(),
+  repo: z.string().nullable(),
+  defaultBranch: z.string().nullable(),
 });
 
 export const postResponseSchema = z.object({
@@ -203,12 +235,235 @@ export const deletePostResponseSchema = z.object({
   organization: organizationResponseSchema,
 });
 
+export const getBrandIdentitiesResponseSchema = z.object({
+  organization: organizationResponseSchema,
+  brandIdentities: z.array(brandIdentityResponseSchema),
+});
+
+export const getBrandIdentityResponseSchema = z.object({
+  brandIdentity: brandIdentityResponseSchema.nullable(),
+  organization: organizationResponseSchema,
+});
+
+export const getIntegrationsResponseSchema = z.object({
+  github: z.array(githubIntegrationResponseSchema),
+  slack: z.array(z.unknown()),
+  linear: z.array(z.unknown()),
+  organization: organizationResponseSchema,
+});
+
+export const generationQueueErrorResponseSchema = z.object({
+  error: z.string(),
+  jobId: z.string().optional(),
+});
+
+export const contentGenerationStatusSchema = z.enum([
+  "queued",
+  "running",
+  "completed",
+  "failed",
+]);
+
+export const contentGenerationLookbackWindowSchema = z.enum(LOOKBACK_WINDOWS);
+
+export const contentGenerationTypeSchema = z.enum(
+  SUPPORTED_CONTENT_GENERATION_TYPES
+);
+
+export const createPostGenerationRequestSchema = z
+  .object({
+    contentType: contentGenerationTypeSchema.openapi({
+      example: "blog_post",
+    }),
+    lookbackWindow: contentGenerationLookbackWindowSchema
+      .default("last_7_days")
+      .openapi({ example: "last_7_days" }),
+    brandVoiceId: z.string().min(1).optional().openapi({
+      example: "voice_123",
+    }),
+    brandIdentityId: z.string().min(1).nullable().optional().openapi({
+      example: "voice_123",
+    }),
+    repositoryIds: z
+      .array(z.string().min(1))
+      .optional()
+      .openapi({
+        example: ["repo_1", "repo_2"],
+      }),
+    integrations: z
+      .object({
+        github: z
+          .array(z.string().min(1))
+          .min(1)
+          .optional()
+          .openapi({
+            example: ["integration_1", "integration_2"],
+          }),
+      })
+      .optional(),
+    github: z
+      .object({
+        repositories: z
+          .array(
+            z.object({
+              owner: z.string().min(1),
+              repo: z.string().min(1),
+            })
+          )
+          .min(1),
+      })
+      .optional()
+      .openapi({
+        example: {
+          repositories: [{ owner: "usenotra", repo: "notra" }],
+        },
+      }),
+    dataPoints: z
+      .object({
+        includePullRequests: z.boolean().default(true),
+        includeCommits: z.boolean().default(true),
+        includeReleases: z.boolean().default(true),
+        includeLinearIssues: z.boolean().default(false),
+      })
+      .default({
+        includePullRequests: true,
+        includeCommits: true,
+        includeReleases: true,
+        includeLinearIssues: false,
+      }),
+    selectedItems: z
+      .object({
+        commitShas: z.array(z.string()).optional(),
+        pullRequestNumbers: z
+          .array(
+            z.object({
+              repositoryId: z.string(),
+              number: z.number(),
+            })
+          )
+          .optional(),
+        releaseTagNames: z
+          .array(
+            z.union([
+              z.string(),
+              z.object({
+                repositoryId: z.string(),
+                tagName: z.string(),
+              }),
+            ])
+          )
+          .optional(),
+      })
+      .optional(),
+  })
+  .refine(
+    (value) => {
+      const repositorySourceCount = [
+        value.repositoryIds?.length ? 1 : 0,
+        value.integrations?.github?.length ? 1 : 0,
+        value.github?.repositories?.length ? 1 : 0,
+      ].reduce((sum, count) => sum + count, 0);
+
+      return repositorySourceCount <= 1;
+    },
+    {
+      message:
+        "Provide only one repository selector: repositoryIds, integrations.github, or github.repositories",
+      path: ["integrations"],
+    }
+  )
+  .refine(
+    (value) =>
+      value.brandVoiceId === undefined || value.brandIdentityId === undefined,
+    {
+      message: "Provide either brandVoiceId or brandIdentityId, not both",
+      path: ["brandIdentityId"],
+    }
+  );
+
+export const contentGenerationJobEventSchema = z.object({
+  id: z.string(),
+  jobId: z.string(),
+  type: z.enum([
+    "queued",
+    "workflow_triggered",
+    "running",
+    "fetching_repositories",
+    "generating_content",
+    "post_created",
+    "completed",
+    "failed",
+  ]),
+  message: z.string(),
+  createdAt: z.string(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
+});
+
+export const contentGenerationJobSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  status: contentGenerationStatusSchema,
+  contentType: contentGenerationTypeSchema,
+  lookbackWindow: contentGenerationLookbackWindowSchema,
+  repositoryIds: z.array(z.string()),
+  brandVoiceId: z.string().nullable(),
+  workflowRunId: z.string().nullable(),
+  postId: z.string().nullable(),
+  error: z.string().nullable(),
+  source: z.enum(["api", "dashboard"]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  completedAt: z.string().nullable(),
+});
+
+export const createPostGenerationResponseSchema = z.object({
+  organization: organizationResponseSchema,
+  job: contentGenerationJobSchema,
+});
+
+export const getPostGenerationParamsSchema = z.object({
+  jobId: z
+    .string()
+    .trim()
+    .min(1, "jobId is required")
+    .openapi({
+      param: {
+        in: "path",
+        name: "jobId",
+      },
+      example: "job_123",
+    }),
+});
+
+export const getPostGenerationResponseSchema = z.object({
+  job: contentGenerationJobSchema,
+  events: z.array(contentGenerationJobEventSchema),
+});
+
 export type GetPostsParams = z.infer<typeof getPostsParamsSchema>;
 export type GetPostsQuery = z.infer<typeof getPostsQuerySchema>;
 export type GetPostParams = z.infer<typeof getPostParamsSchema>;
+export type GetBrandIdentityParams = z.infer<
+  typeof getBrandIdentityParamsSchema
+>;
 export type PostResponse = z.infer<typeof postResponseSchema>;
 export type GetPostsResponse = z.infer<typeof getPostsResponseSchema>;
 export type GetPostResponse = z.infer<typeof getPostResponseSchema>;
+export type GetBrandIdentityResponse = z.infer<
+  typeof getBrandIdentityResponseSchema
+>;
 export type PatchPostRequest = z.infer<typeof patchPostRequestSchema>;
 export type PatchPostResponse = z.infer<typeof patchPostResponseSchema>;
 export type DeletePostResponse = z.infer<typeof deletePostResponseSchema>;
+export type CreatePostGenerationRequest = z.infer<
+  typeof createPostGenerationRequestSchema
+>;
+export type CreatePostGenerationResponse = z.infer<
+  typeof createPostGenerationResponseSchema
+>;
+export type GetPostGenerationParams = z.infer<
+  typeof getPostGenerationParamsSchema
+>;
+export type GetPostGenerationResponse = z.infer<
+  typeof getPostGenerationResponseSchema
+>;

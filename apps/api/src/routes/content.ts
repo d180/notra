@@ -1,12 +1,36 @@
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
+import {
+  appendContentGenerationJobEvent,
+  createContentGenerationJob,
+  createContentGenerationJobId,
+  getContentGenerationJob,
+  listContentGenerationJobEvents,
+  setContentGenerationJobStatus,
+  updateContentGenerationJob,
+} from "@notra/content-generation/jobs";
 import type { createDb } from "@notra/db/drizzle-http";
-import { organizations, posts } from "@notra/db/schema";
-import { and, count, eq, inArray } from "drizzle-orm";
+import {
+  brandSettings,
+  githubIntegrations,
+  organizations,
+  posts,
+} from "@notra/db/schema";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+
 import {
   ALL_POST_CONTENT_TYPES,
   ALL_POST_STATUSES,
+  createPostGenerationRequestSchema,
+  createPostGenerationResponseSchema,
   deletePostResponseSchema,
   errorResponseSchema,
+  generationQueueErrorResponseSchema,
+  getBrandIdentitiesResponseSchema,
+  getBrandIdentityParamsSchema,
+  getBrandIdentityResponseSchema,
+  getIntegrationsResponseSchema,
+  getPostGenerationParamsSchema,
+  getPostGenerationResponseSchema,
   getPostParamsSchema,
   getPostResponseSchema,
   getPostsOpenApiQuerySchema,
@@ -15,11 +39,17 @@ import {
   patchPostRequestSchema,
   patchPostResponseSchema,
 } from "../schemas/content";
+import { addActiveGeneration } from "../utils/active-generations";
 import { getOrganizationId } from "../utils/auth";
+import {
+  isContentGenerationConfigured,
+  triggerContentGenerationWorkflow,
+} from "../utils/content-generation";
 import {
   extractTitleFromMarkdown,
   renderMarkdownToHtml,
 } from "../utils/markdown";
+import { getRedis } from "../utils/redis";
 import {
   ORGANIZATION_POST_PATH_REGEX,
   ORGANIZATION_POSTS_PATH_REGEX,
@@ -65,6 +95,211 @@ function shouldApplyFilter(
   allValues: readonly string[]
 ) {
   return selectedValues.length < allValues.length;
+}
+
+function getContentGenerationUnavailableReason(runtimeEnv: {
+  UPSTASH_REDIS_REST_URL?: string;
+  UPSTASH_REDIS_REST_TOKEN?: string;
+  QSTASH_TOKEN?: string;
+  CONTENT_GENERATION_WORKFLOW_URL?: string;
+  CONTENT_GENERATION_WORKFLOW_BASE_URL?: string;
+}) {
+  if (
+    !(runtimeEnv.UPSTASH_REDIS_REST_URL && runtimeEnv.UPSTASH_REDIS_REST_TOKEN)
+  ) {
+    return "Content generation is unavailable: Redis is not configured";
+  }
+
+  if (!runtimeEnv.QSTASH_TOKEN) {
+    return "Content generation is unavailable: QStash is not configured";
+  }
+
+  if (
+    !runtimeEnv.CONTENT_GENERATION_WORKFLOW_URL &&
+    !runtimeEnv.CONTENT_GENERATION_WORKFLOW_BASE_URL
+  ) {
+    return "Content generation is unavailable: workflow URL is not configured";
+  }
+
+  return null;
+}
+
+async function resolveRequestedRepositoryIds(
+  db: ReturnType<typeof createDb>,
+  organizationId: string,
+  request: {
+    repositoryIds?: string[];
+    integrations?: {
+      github?: string[];
+    };
+    github?: {
+      repositories: Array<{ owner: string; repo: string }>;
+    };
+  }
+) {
+  if (request.repositoryIds?.length) {
+    return request.repositoryIds;
+  }
+
+  if (request.integrations?.github?.length) {
+    const uniqueIntegrationIds = Array.from(
+      new Set(request.integrations.github)
+    );
+    const connectedRepositories = await db
+      .select({
+        id: githubIntegrations.id,
+      })
+      .from(githubIntegrations)
+      .where(
+        and(
+          eq(githubIntegrations.organizationId, organizationId),
+          eq(githubIntegrations.enabled, true),
+          inArray(githubIntegrations.id, uniqueIntegrationIds)
+        )
+      );
+
+    const matchedRepositoryIds = connectedRepositories.map(
+      (integration) => integration.id
+    );
+
+    if (matchedRepositoryIds.length !== uniqueIntegrationIds.length) {
+      const connectedRepositoryIds = new Set(matchedRepositoryIds);
+      const missingIntegrationIds = uniqueIntegrationIds.filter(
+        (integrationId) => !connectedRepositoryIds.has(integrationId)
+      );
+
+      throw new Error(
+        `Requested GitHub integrations are not available for this organization: ${missingIntegrationIds.join(", ")}`
+      );
+    }
+
+    return matchedRepositoryIds;
+  }
+
+  if (!request.github?.repositories?.length) {
+    return undefined;
+  }
+
+  const connectedRepositories = await db
+    .select({
+      id: githubIntegrations.id,
+      owner: githubIntegrations.owner,
+      repo: githubIntegrations.repo,
+    })
+    .from(githubIntegrations)
+    .where(
+      and(
+        eq(githubIntegrations.organizationId, organizationId),
+        eq(githubIntegrations.enabled, true)
+      )
+    );
+
+  const uniqueRequestedRepositories = Array.from(
+    new Map(
+      request.github.repositories.map((repository) => [
+        `${repository.owner.toLowerCase()}/${repository.repo.toLowerCase()}`,
+        repository,
+      ])
+    ).values()
+  );
+
+  const requestedRepos = new Set(
+    uniqueRequestedRepositories.map(
+      ({ owner, repo }) => `${owner.toLowerCase()}/${repo.toLowerCase()}`
+    )
+  );
+
+  const matchedRepositoryIds = connectedRepositories
+    .filter(
+      (integration: {
+        id: string;
+        owner: string | null;
+        repo: string | null;
+      }) => {
+        if (!(integration.owner && integration.repo)) {
+          return false;
+        }
+
+        return requestedRepos.has(
+          `${integration.owner.toLowerCase()}/${integration.repo.toLowerCase()}`
+        );
+      }
+    )
+    .map((integration) => integration.id);
+
+  if (matchedRepositoryIds.length !== uniqueRequestedRepositories.length) {
+    const connectedRepoNames = new Set(
+      connectedRepositories
+        .filter((integration) => integration.owner && integration.repo)
+        .map(
+          (integration) =>
+            `${integration.owner?.toLowerCase()}/${integration.repo?.toLowerCase()}`
+        )
+    );
+
+    const missingRepositories = uniqueRequestedRepositories.filter(
+      ({ owner, repo }) =>
+        !connectedRepoNames.has(`${owner.toLowerCase()}/${repo.toLowerCase()}`)
+    );
+
+    throw new Error(
+      `Requested repositories are not connected for this organization: ${missingRepositories
+        .map(({ owner, repo }) => `${owner}/${repo}`)
+        .join(", ")}`
+    );
+  }
+
+  return matchedRepositoryIds;
+}
+
+async function resolveRequestedBrandVoiceId(
+  db: ReturnType<typeof createDb>,
+  organizationId: string,
+  brandVoiceId?: string | null
+) {
+  if (brandVoiceId) {
+    const explicitVoice = await db.query.brandSettings.findFirst({
+      where: and(
+        eq(brandSettings.id, brandVoiceId),
+        eq(brandSettings.organizationId, organizationId)
+      ),
+      columns: {
+        id: true,
+      },
+    });
+
+    if (!explicitVoice) {
+      throw new Error(
+        "Requested brand voice does not belong to this organization"
+      );
+    }
+
+    return explicitVoice.id;
+  }
+
+  const defaultVoice = await db.query.brandSettings.findFirst({
+    where: and(
+      eq(brandSettings.organizationId, organizationId),
+      eq(brandSettings.isDefault, true)
+    ),
+    columns: {
+      id: true,
+    },
+  });
+
+  if (defaultVoice) {
+    return defaultVoice.id;
+  }
+
+  const latestVoice = await db.query.brandSettings.findFirst({
+    where: eq(brandSettings.organizationId, organizationId),
+    orderBy: [desc(brandSettings.updatedAt)],
+    columns: {
+      id: true,
+    },
+  });
+
+  return latestVoice?.id ?? null;
 }
 
 contentRoutes.get("/:organizationId/posts", async (c) => {
@@ -388,6 +623,280 @@ const patchPostRoute = createRoute({
   },
 });
 
+const createPostGenerationRoute = createRoute({
+  method: "post",
+  path: "/posts/generate",
+  tags: ["Content"],
+  operationId: "createPostGeneration",
+  summary: "Queue async post generation",
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: createPostGenerationRequestSchema,
+        },
+      },
+      required: true,
+    },
+  },
+  responses: {
+    202: {
+      description: "Post generation queued successfully",
+      content: {
+        "application/json": {
+          schema: createPostGenerationResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Invalid request body",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Missing or invalid API key",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    403: {
+      description: "Forbidden",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    503: {
+      description: "Content generation is unavailable",
+      content: {
+        "application/json": {
+          schema: generationQueueErrorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+const getBrandIdentitiesRoute = createRoute({
+  method: "get",
+  path: "/brand-identities",
+  tags: ["Content"],
+  operationId: "listBrandIdentities",
+  summary: "List available brand identities",
+  responses: {
+    200: {
+      description: "Brand identities fetched successfully",
+      content: {
+        "application/json": {
+          schema: getBrandIdentitiesResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Missing or invalid API key",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    403: {
+      description: "Forbidden",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: "Organization not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    503: {
+      description: "Authentication service unavailable",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+const getBrandIdentityRoute = createRoute({
+  method: "get",
+  path: "/brand-identities/{brandIdentityId}",
+  tags: ["Content"],
+  operationId: "getBrandIdentity",
+  summary: "Get a single brand identity",
+  request: {
+    params: getBrandIdentityParamsSchema,
+  },
+  responses: {
+    200: {
+      description: "Brand identity fetched successfully",
+      content: {
+        "application/json": {
+          schema: getBrandIdentityResponseSchema,
+        },
+      },
+    },
+    400: {
+      description: "Invalid path params",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Missing or invalid API key",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    403: {
+      description: "Forbidden",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: "Organization not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    503: {
+      description: "Authentication service unavailable",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+const getIntegrationsRoute = createRoute({
+  method: "get",
+  path: "/integrations",
+  tags: ["Content"],
+  operationId: "listIntegrations",
+  summary: "List available integrations",
+  responses: {
+    200: {
+      description: "Integrations fetched successfully",
+      content: {
+        "application/json": {
+          schema: getIntegrationsResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Missing or invalid API key",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    403: {
+      description: "Forbidden",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: "Organization not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    503: {
+      description: "Authentication service unavailable",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
+const getPostGenerationRoute = createRoute({
+  method: "get",
+  path: "/posts/generate/{jobId}",
+  tags: ["Content"],
+  operationId: "getPostGeneration",
+  summary: "Get async post generation status",
+  request: {
+    params: getPostGenerationParamsSchema,
+  },
+  responses: {
+    200: {
+      description: "Post generation status fetched successfully",
+      content: {
+        "application/json": {
+          schema: getPostGenerationResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: "Missing or invalid API key",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    403: {
+      description: "Forbidden",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    404: {
+      description: "Generation job not found",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+    503: {
+      description: "Content generation is unavailable",
+      content: {
+        "application/json": {
+          schema: errorResponseSchema,
+        },
+      },
+    },
+  },
+});
+
 contentRoutes.openapi(getPostsRoute, async (c) => {
   const orgId = getOrganizationId(c);
   if (!orgId) {
@@ -449,7 +958,6 @@ contentRoutes.openapi(getPostsRoute, async (c) => {
 
   return c.json(
     {
-      organization,
       posts: results,
       pagination: {
         limit,
@@ -459,6 +967,7 @@ contentRoutes.openapi(getPostsRoute, async (c) => {
         totalPages,
         totalItems,
       },
+      organization,
     },
     200
   );
@@ -499,8 +1008,8 @@ contentRoutes.openapi(getPostRoute, async (c) => {
 
   return c.json(
     {
-      organization,
       post: post ?? null,
+      organization,
     },
     200
   );
@@ -616,5 +1125,294 @@ contentRoutes.openapi(patchPostRoute, async (c) => {
     return c.json({ error: "Post not found" }, 404);
   }
 
-  return c.json({ organization, post: updatedPost }, 200);
+  return c.json({ post: updatedPost, organization }, 200);
+});
+
+contentRoutes.openapi(createPostGenerationRoute, async (c) => {
+  const orgId = getOrganizationId(c);
+  if (!orgId) {
+    return c.json(
+      { error: "Forbidden: API key must be scoped to an organization" },
+      403
+    );
+  }
+
+  const runtimeEnv = c.env ?? {};
+  const redis = getRedis(runtimeEnv);
+  const unavailableReason = getContentGenerationUnavailableReason(runtimeEnv);
+  if (
+    !redis ||
+    !isContentGenerationConfigured(runtimeEnv) ||
+    unavailableReason
+  ) {
+    return c.json(
+      { error: unavailableReason ?? "Content generation is unavailable" },
+      503
+    );
+  }
+
+  const body = c.req.valid("json");
+  const db = c.get("db");
+  const organization = await getOrganizationResponse(db, orgId);
+
+  let repositoryIds: string[] | undefined;
+  let resolvedBrandVoiceId: string | null = null;
+
+  try {
+    repositoryIds = await resolveRequestedRepositoryIds(db, orgId, {
+      repositoryIds: body.repositoryIds,
+      integrations: body.integrations,
+      github: body.github,
+    });
+    resolvedBrandVoiceId = await resolveRequestedBrandVoiceId(
+      db,
+      orgId,
+      body.brandIdentityId ?? body.brandVoiceId
+    );
+  } catch (error) {
+    return c.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to resolve requested repositories",
+      },
+      400
+    );
+  }
+
+  const now = new Date().toISOString();
+  const jobId = createContentGenerationJobId();
+
+  const job = await createContentGenerationJob(redis, {
+    id: jobId,
+    organizationId: orgId,
+    status: "queued",
+    contentType: body.contentType,
+    lookbackWindow: body.lookbackWindow,
+    repositoryIds: repositoryIds ?? [],
+    brandVoiceId: resolvedBrandVoiceId,
+    workflowRunId: null,
+    postId: null,
+    error: null,
+    source: "api",
+    createdAt: now,
+    updatedAt: now,
+    completedAt: null,
+  });
+
+  await addActiveGeneration(redis, orgId, {
+    runId: jobId,
+    triggerId: "api_on_demand",
+    outputType: body.contentType,
+    triggerName: body.contentType,
+    startedAt: now,
+    source: "api",
+  });
+
+  await appendContentGenerationJobEvent(redis, {
+    id: crypto.randomUUID(),
+    jobId,
+    type: "queued",
+    message: `Queued ${body.contentType.replaceAll("_", " ")} generation`,
+    createdAt: now,
+    metadata: {
+      lookbackWindow: body.lookbackWindow,
+      repositoryCount: repositoryIds?.length ?? 0,
+    },
+  });
+
+  try {
+    const workflowRunId = await triggerContentGenerationWorkflow(runtimeEnv, {
+      organizationId: orgId,
+      jobId,
+      runId: jobId,
+      contentType: body.contentType,
+      lookbackWindow: body.lookbackWindow,
+      repositoryIds,
+      brandVoiceId: resolvedBrandVoiceId ?? undefined,
+      dataPoints: body.dataPoints,
+      selectedItems: body.selectedItems,
+      aiCreditReserved: false,
+      source: "api",
+    });
+
+    const updatedJob = await updateContentGenerationJob(redis, jobId, {
+      workflowRunId,
+    });
+
+    await appendContentGenerationJobEvent(redis, {
+      id: crypto.randomUUID(),
+      jobId,
+      type: "workflow_triggered",
+      message: "Triggered content generation workflow",
+      createdAt: new Date().toISOString(),
+      metadata: { workflowRunId },
+    });
+
+    return c.json({ job: updatedJob ?? job, organization: organization! }, 202);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Failed to trigger workflow";
+
+    const failedJob = await setContentGenerationJobStatus(
+      redis,
+      jobId,
+      "failed",
+      { error: message }
+    );
+
+    await appendContentGenerationJobEvent(redis, {
+      id: crypto.randomUUID(),
+      jobId,
+      type: "failed",
+      message,
+      createdAt: new Date().toISOString(),
+      metadata: null,
+    });
+
+    return c.json(
+      {
+        error: "Failed to queue content generation",
+        ...(failedJob ? { jobId: failedJob.id } : {}),
+      },
+      503
+    );
+  }
+});
+
+contentRoutes.openapi(getBrandIdentitiesRoute, async (c) => {
+  const orgId = getOrganizationId(c);
+  if (!orgId) {
+    return c.json(
+      { error: "Forbidden: API key must be scoped to an organization" },
+      403
+    );
+  }
+
+  const db = c.get("db");
+  const organization = await getOrganizationResponse(db, orgId);
+
+  if (!organization) {
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const brandIdentities = await db.query.brandSettings.findMany({
+    where: eq(brandSettings.organizationId, orgId),
+    orderBy: [desc(brandSettings.isDefault), asc(brandSettings.createdAt)],
+    columns: {
+      id: true,
+      name: true,
+      isDefault: true,
+    },
+  });
+
+  return c.json({ brandIdentities, organization }, 200);
+});
+
+contentRoutes.openapi(getBrandIdentityRoute, async (c) => {
+  const orgId = getOrganizationId(c);
+  if (!orgId) {
+    return c.json(
+      { error: "Forbidden: API key must be scoped to an organization" },
+      403
+    );
+  }
+
+  const { brandIdentityId } = c.req.valid("param");
+  const db = c.get("db");
+  const organization = await getOrganizationResponse(db, orgId);
+
+  if (!organization) {
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const brandIdentity = await db.query.brandSettings.findFirst({
+    where: and(
+      eq(brandSettings.id, brandIdentityId),
+      eq(brandSettings.organizationId, orgId)
+    ),
+    columns: {
+      id: true,
+      name: true,
+      isDefault: true,
+    },
+  });
+
+  return c.json({ brandIdentity: brandIdentity ?? null, organization }, 200);
+});
+
+contentRoutes.openapi(getIntegrationsRoute, async (c) => {
+  const orgId = getOrganizationId(c);
+  if (!orgId) {
+    return c.json(
+      { error: "Forbidden: API key must be scoped to an organization" },
+      403
+    );
+  }
+
+  const db = c.get("db");
+  const organization = await getOrganizationResponse(db, orgId);
+
+  if (!organization) {
+    return c.json({ error: "Organization not found" }, 404);
+  }
+
+  const github = await db.query.githubIntegrations.findMany({
+    where: and(
+      eq(githubIntegrations.organizationId, orgId),
+      eq(githubIntegrations.enabled, true)
+    ),
+    orderBy: [asc(githubIntegrations.displayName), asc(githubIntegrations.id)],
+    columns: {
+      id: true,
+      displayName: true,
+      owner: true,
+      repo: true,
+      defaultBranch: true,
+    },
+  });
+
+  return c.json(
+    {
+      github,
+      slack: [],
+      linear: [],
+      organization,
+    },
+    200
+  );
+});
+
+contentRoutes.openapi(getPostGenerationRoute, async (c) => {
+  const orgId = getOrganizationId(c);
+  if (!orgId) {
+    return c.json(
+      { error: "Forbidden: API key must be scoped to an organization" },
+      403
+    );
+  }
+
+  const redis = getRedis(c.env ?? {});
+  const unavailableReason = getContentGenerationUnavailableReason(c.env ?? {});
+  if (!redis || unavailableReason) {
+    return c.json(
+      { error: unavailableReason ?? "Content generation is unavailable" },
+      503
+    );
+  }
+
+  const { jobId } = c.req.valid("param");
+  const job = await getContentGenerationJob(redis, jobId);
+
+  if (!job) {
+    return c.json({ error: "Generation job not found" }, 404);
+  }
+
+  if (job.organizationId !== orgId) {
+    return c.json({ error: "Forbidden: organization access denied" }, 403);
+  }
+
+  const events = await listContentGenerationJobEvents(redis, jobId);
+  return c.json({ job, events }, 200);
 });

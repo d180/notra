@@ -1,3 +1,4 @@
+import { createContentGenerationRequestSchema } from "@notra/content-generation/schemas";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { FEATURES } from "@/constants/features";
@@ -5,7 +6,6 @@ import { withOrganizationAuth } from "@/lib/auth/organization";
 import { autumn } from "@/lib/billing/autumn";
 import { addActiveGeneration, generateRunId } from "@/lib/generations/tracking";
 import { triggerOnDemandContent } from "@/lib/triggers/qstash";
-import { createOnDemandContentSchema } from "@/schemas/content";
 
 interface RouteContext {
   params: Promise<{ organizationId: string }>;
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     );
   }
 
-  const bodyValidation = createOnDemandContentSchema.safeParse(body);
+  const bodyValidation = createContentGenerationRequestSchema.safeParse(body);
 
   if (!bodyValidation.success) {
     return NextResponse.json(
@@ -45,7 +45,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     contentType,
     lookbackWindow,
     repositoryIds,
+    integrations,
     selectedItems,
+    brandIdentityId,
     brandVoiceId,
     dataPoints,
   } = bodyValidation.data;
@@ -109,6 +111,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     outputType: contentType,
     triggerName: contentType,
     startedAt: new Date().toISOString(),
+    source: "dashboard",
   });
 
   await triggerOnDemandContent({
@@ -116,11 +119,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     runId,
     contentType,
     lookbackWindow,
-    repositoryIds,
-    brandVoiceId,
+    repositoryIds: repositoryIds ?? integrations?.github,
+    brandVoiceId: brandIdentityId ?? brandVoiceId,
     dataPoints,
     selectedItems,
     aiCreditReserved,
+    source: "dashboard",
   });
 
   return NextResponse.json({ success: true, runId }, { status: 202 });
