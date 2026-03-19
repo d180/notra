@@ -54,6 +54,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@notra/ui/components/ui/select";
+import { BrandVoiceCombobox } from "@/components/brand-voice-combobox";
 import { Skeleton } from "@notra/ui/components/ui/skeleton";
 import { Switch } from "@notra/ui/components/ui/switch";
 import { cn } from "@notra/ui/lib/utils";
@@ -140,9 +141,30 @@ export function CreateContentDialog({
       contentType: DEFAULT_CONTENT_TYPE,
       lookbackWindow: "last_7_days" as LookbackWindow,
       repositoryIds: [] as string[],
+      brandVoiceId: "" as string,
       dataPoints: DEFAULT_DATA_POINTS,
     },
   });
+
+  const { data: brandResponse } = useQuery<{
+    voices: Array<{
+      id: string;
+      name: string;
+      isDefault: boolean;
+    }>;
+  }>({
+    queryKey: QUERY_KEYS.BRAND.settings(organizationId),
+    queryFn: async () => {
+      const res = await fetch(`/api/organizations/${organizationId}/brand`);
+      if (!res.ok) {
+        throw new Error("Failed to fetch brand voices");
+      }
+      return res.json();
+    },
+    enabled: !!organizationId,
+  });
+
+  const brandVoices = brandResponse?.voices ?? [];
 
   const { data: integrationsResponse, isLoading: isLoadingRepos } = useQuery<{
     integrations: Array<GitHubIntegration & { type: string }>;
@@ -306,6 +328,7 @@ export function CreateContentDialog({
       contentType: OnDemandContentType;
       lookbackWindow: LookbackWindow;
       repositoryIds: string[];
+      brandVoiceId?: string;
       dataPoints: ContentDataPointSettings;
       selectedItems?: SelectedItems;
     }
@@ -388,7 +411,11 @@ export function CreateContentDialog({
               : [],
           }
         : undefined;
-    mutation.mutate({ ...value, selectedItems });
+    mutation.mutate({
+      ...value,
+      brandVoiceId: value.brandVoiceId || undefined,
+      selectedItems,
+    });
   }, [form, mutation, selectedCommitKeys, selectedPrKeys, selectedReleaseKeys]);
 
   const eventCounts = useMemo(() => {
@@ -668,6 +695,19 @@ export function CreateContentDialog({
                     </div>
                   )}
                 </form.Field>
+
+                {brandVoices.length > 1 && (
+                  <form.Field name="brandVoiceId">
+                    {(field) => (
+                      <BrandVoiceCombobox
+                        id={field.name}
+                        onChange={field.handleChange}
+                        value={field.state.value}
+                        voices={brandVoices}
+                      />
+                    )}
+                  </form.Field>
+                )}
 
                 <form.Field name="lookbackWindow">
                   {(field) => (

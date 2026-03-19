@@ -56,6 +56,7 @@ import {
 import type { BrandSettings } from "@/types/hooks/brand-analysis";
 import type { GitHubIntegration } from "@/types/integrations";
 import type { Trigger } from "@/types/triggers/triggers";
+import { BrandVoiceCombobox } from "@/components/brand-voice-combobox";
 import { formatSnakeCaseLabel } from "@/utils/format";
 import { OutputTypeIcon } from "@/utils/output-types";
 import { QUERY_KEYS } from "@/utils/query-keys";
@@ -495,64 +496,14 @@ export function AddTriggerDialog({
 
                       {brandVoices.length > 1 && (
                         <form.Field name="brandVoiceId">
-                          {(field) => {
-                            const defaultVoiceName = brandVoices.find(
-                              (voice) => voice.isDefault
-                            )?.name;
-                            const selectedVoiceName =
-                              brandVoices.find(
-                                (voice) => voice.id === field.state.value
-                              )?.name ??
-                              (defaultVoiceName
-                                ? `Default Voice (${defaultVoiceName})`
-                                : "Default Voice");
-
-                            return (
-                              <div className="space-y-2">
-                                <Label htmlFor={field.name}>Brand Voice</Label>
-                                <Select
-                                  onValueChange={(value) => {
-                                    const nextValue =
-                                      value && value !== "__default__"
-                                        ? value
-                                        : "";
-                                    field.handleChange(nextValue);
-                                  }}
-                                  value={field.state.value || "__default__"}
-                                >
-                                  <SelectTrigger
-                                    className="w-full"
-                                    id={field.name}
-                                  >
-                                    <SelectValue placeholder="Default Voice">
-                                      {selectedVoiceName}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="__default__">
-                                      {defaultVoiceName
-                                        ? `Default Voice (${defaultVoiceName})`
-                                        : "Default Voice"}
-                                    </SelectItem>
-                                    {brandVoices
-                                      .filter((v) => !v.isDefault)
-                                      .map((voice) => (
-                                        <SelectItem
-                                          key={voice.id}
-                                          value={voice.id}
-                                        >
-                                          {voice.name}
-                                        </SelectItem>
-                                      ))}
-                                  </SelectContent>
-                                </Select>
-                                <p className="text-muted-foreground text-xs">
-                                  Choose which brand voice to use for generated
-                                  content.
-                                </p>
-                              </div>
-                            );
-                          }}
+                          {(field) => (
+                            <BrandVoiceCombobox
+                              id={field.name}
+                              onChange={field.handleChange}
+                              value={field.state.value}
+                              voices={brandVoices}
+                            />
+                          )}
                         </form.Field>
                       )}
                     </>
