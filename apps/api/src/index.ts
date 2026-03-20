@@ -51,6 +51,12 @@ app.use("/v1/*", async (c, next) => {
   const allowedOrigin = getAllowedOrigin(origin);
 
   c.header("Vary", "Origin");
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header(
+    "Strict-Transport-Security",
+    "max-age=63072000; includeSubDomains; preload"
+  );
+  c.header("Referrer-Policy", "strict-origin-when-cross-origin");
 
   if (allowedOrigin) {
     c.header("Access-Control-Allow-Origin", allowedOrigin);
