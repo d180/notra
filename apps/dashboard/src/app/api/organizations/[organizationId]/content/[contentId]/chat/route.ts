@@ -37,12 +37,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         featureId: FEATURES.AI_CREDITS,
       });
 
-      const { data: checkData, error: checkError } = await autumn.check({
-        customer_id: organizationId,
-        feature_id: FEATURES.AI_CREDITS,
-      });
-
-      if (checkError) {
+      let checkData;
+      try {
+        checkData = await autumn.check({
+          customerId: organizationId,
+          featureId: FEATURES.AI_CREDITS,
+        });
+      } catch (checkError) {
         console.error("[Autumn] Check error:", {
           requestId,
           customerId: organizationId,
@@ -91,20 +92,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     let tracked = false;
     if (autumn) {
-      const { error: trackError } = await autumn.track({
-        customer_id: organizationId,
-        feature_id: FEATURES.AI_CREDITS,
-        value: 1,
-      });
-
-      if (trackError) {
+      try {
+        await autumn.track({
+          customerId: organizationId,
+          featureId: FEATURES.AI_CREDITS,
+          value: 1,
+        });
+        tracked = true;
+      } catch (trackError) {
         console.error("[Autumn] Track error:", {
           requestId,
           customerId: organizationId,
           error: trackError,
         });
       }
-      tracked = !trackError;
     }
 
     try {
@@ -140,14 +141,25 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       });
     } catch (orchestrationError) {
       if (tracked && autumn) {
-        await autumn.track({
-          customer_id: organizationId,
-          feature_id: FEATURES.AI_CREDITS,
-          value: 0,
-        });
-        console.log("[Autumn] Usage compensated after orchestration failure:", {
-          requestId,
-        });
+        try {
+          await autumn.track({
+            customerId: organizationId,
+            featureId: FEATURES.AI_CREDITS,
+            value: 0,
+          });
+          console.log(
+            "[Autumn] Usage compensated after orchestration failure:",
+            {
+              requestId,
+            }
+          );
+        } catch (refundError) {
+          console.error("[Autumn] Failed to compensate usage:", {
+            requestId,
+            customerId: organizationId,
+            error: refundError,
+          });
+        }
       }
       throw orchestrationError;
     }

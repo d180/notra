@@ -234,14 +234,15 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
         return { canceled: false, reserved: false };
       }
 
-      const { data, error } = await autumn.check({
-        customer_id: trigger.organizationId,
-        feature_id: FEATURES.AI_CREDITS,
-        required_balance: 1,
-        send_event: true,
-      });
-
-      if (error) {
+      let data;
+      try {
+        data = await autumn.check({
+          customerId: trigger.organizationId,
+          featureId: FEATURES.AI_CREDITS,
+          requiredBalance: 1,
+          sendEvent: true,
+        });
+      } catch (error) {
         throw new Error(`Autumn check failed: ${String(error)}`);
       }
 
@@ -362,13 +363,13 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
         const autumnClient = autumn;
         if (aiCreditReservation.reserved && autumnClient) {
           await context.run("refund-ai-credit-after-rate-limit", async () => {
-            const { error } = await autumnClient.track({
-              customer_id: trigger.organizationId,
-              feature_id: FEATURES.AI_CREDITS,
-              value: 0,
-            });
-
-            if (error) {
+            try {
+              await autumnClient.track({
+                customerId: trigger.organizationId,
+                featureId: FEATURES.AI_CREDITS,
+                value: 0,
+              });
+            } catch (error) {
               console.error(
                 "[Schedule] Failed to refund AI credit after rate limit",
                 {
@@ -418,13 +419,13 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           await context.run(
             "refund-ai-credit-after-unsupported-output-type",
             async () => {
-              const { error } = await autumnClient.track({
-                customer_id: trigger.organizationId,
-                feature_id: FEATURES.AI_CREDITS,
-                value: 0,
-              });
-
-              if (error) {
+              try {
+                await autumnClient.track({
+                  customerId: trigger.organizationId,
+                  featureId: FEATURES.AI_CREDITS,
+                  value: 0,
+                });
+              } catch (error) {
                 console.error(
                   "[Schedule] Failed to refund AI credit after unsupported output type",
                   {
@@ -453,13 +454,13 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           await context.run(
             "refund-ai-credit-after-generation-failure",
             async () => {
-              const { error } = await autumnClient.track({
-                customer_id: trigger.organizationId,
-                feature_id: FEATURES.AI_CREDITS,
-                value: 0,
-              });
-
-              if (error) {
+              try {
+                await autumnClient.track({
+                  customerId: trigger.organizationId,
+                  featureId: FEATURES.AI_CREDITS,
+                  value: 0,
+                });
+              } catch (error) {
                 console.error(
                   "[Schedule] Failed to refund AI credit after generation failure",
                   {
@@ -814,13 +815,13 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
       const autumnClient = autumn;
       if (aiCreditReservation.reserved && autumnClient) {
         await context.run("refund-ai-credit-after-failure", async () => {
-          const { error: refundError } = await autumnClient.track({
-            customer_id: trigger.organizationId,
-            feature_id: FEATURES.AI_CREDITS,
-            value: 0,
-          });
-
-          if (refundError) {
+          try {
+            await autumnClient.track({
+              customerId: trigger.organizationId,
+              featureId: FEATURES.AI_CREDITS,
+              value: 0,
+            });
+          } catch (refundError) {
             console.error(
               "[Schedule] Failed to refund AI credit after failure",
               {

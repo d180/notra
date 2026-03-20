@@ -101,12 +101,17 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     let maxResults = parsed.data.maxResults;
 
     if (autumn) {
-      const { data, error } = await autumn.check({
-        customer_id: organizationId,
-        feature_id: FEATURES.REFERENCES,
-        required_balance: 1,
-      });
-      if (error || !data?.allowed) {
+      let data;
+      try {
+        data = await autumn.check({
+          customerId: organizationId,
+          featureId: FEATURES.REFERENCES,
+          requiredBalance: 1,
+        });
+      } catch {
+        data = null;
+      }
+      if (!data?.allowed) {
         return NextResponse.json(
           {
             error: "Reference limit reached. Upgrade your plan to import more.",
@@ -114,8 +119,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           { status: 403 }
         );
       }
-      if (!data.unlimited && typeof data.balance === "number") {
-        maxResults = Math.min(maxResults, data.balance);
+      if (
+        !data.balance?.unlimited &&
+        typeof data.balance?.remaining === "number"
+      ) {
+        maxResults = Math.min(maxResults, data.balance.remaining);
       }
     }
 
@@ -284,8 +292,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     if (autumn && inserted.length > 0) {
       await autumn.track({
-        customer_id: organizationId,
-        feature_id: FEATURES.REFERENCES,
+        customerId: organizationId,
+        featureId: FEATURES.REFERENCES,
         value: inserted.length,
       });
     }

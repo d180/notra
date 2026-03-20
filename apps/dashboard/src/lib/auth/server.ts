@@ -38,13 +38,14 @@ async function enforceTeamMembersLimit(organizationId?: string | null) {
     return;
   }
 
-  const { data, error } = await autumn.check({
-    customer_id: organizationId,
-    feature_id: FEATURES.TEAM_MEMBERS,
-    required_balance: 1,
-  });
-
-  if (error) {
+  let data;
+  try {
+    data = await autumn.check({
+      customerId: organizationId,
+      featureId: FEATURES.TEAM_MEMBERS,
+      requiredBalance: 1,
+    });
+  } catch (error) {
     console.warn("[Autumn] Failed to check team member limits", {
       organizationId,
       error,
@@ -329,8 +330,8 @@ export const auth = betterAuth({
             );
             return;
           }
-          const result = await autumn.customers.create({
-            id: org.id,
+          await autumn.customers.getOrCreate({
+            customerId: org.id,
             name: org.name,
             metadata: {
               orgId: org.id,

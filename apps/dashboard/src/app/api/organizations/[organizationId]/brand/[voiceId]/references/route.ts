@@ -108,13 +108,18 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       typeDefaults[result.data.type] ?? ["all"];
 
     if (autumn) {
-      const { data, error } = await autumn.check({
-        customer_id: organizationId,
-        feature_id: FEATURES.REFERENCES,
-        required_balance: 1,
-        send_event: true,
-      });
-      if (error || !data?.allowed) {
+      let data;
+      try {
+        data = await autumn.check({
+          customerId: organizationId,
+          featureId: FEATURES.REFERENCES,
+          requiredBalance: 1,
+          sendEvent: true,
+        });
+      } catch {
+        data = null;
+      }
+      if (!data?.allowed) {
         return NextResponse.json(
           { error: "Reference limit reached. Upgrade your plan to add more." },
           { status: 403 }
@@ -252,8 +257,8 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
     if (autumn) {
       await autumn.track({
-        customer_id: organizationId,
-        feature_id: FEATURES.REFERENCES,
+        customerId: organizationId,
+        featureId: FEATURES.REFERENCES,
         value: -1,
       });
     }

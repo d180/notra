@@ -79,14 +79,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   let aiCreditReserved = false;
 
   if (autumn) {
-    const { data, error } = await autumn.check({
-      customer_id: organizationId,
-      feature_id: FEATURES.AI_CREDITS,
-      required_balance: 1,
-      send_event: true,
-    });
-
-    if (error) {
+    let data;
+    try {
+      data = await autumn.check({
+        customerId: organizationId,
+        featureId: FEATURES.AI_CREDITS,
+        requiredBalance: 1,
+        sendEvent: true,
+      });
+    } catch {
       return NextResponse.json(
         { error: "Failed to verify AI credits" },
         { status: 500 }

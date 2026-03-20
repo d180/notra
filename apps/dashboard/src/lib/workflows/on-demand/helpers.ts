@@ -244,13 +244,13 @@ export async function refundReservedAiCredit(
     return;
   }
 
-  const { error } = await autumn.track({
-    customer_id: organizationId,
-    feature_id: FEATURES.AI_CREDITS,
-    value: 0,
-  });
-
-  if (error) {
+  try {
+    await autumn.track({
+      customerId: organizationId,
+      featureId: FEATURES.AI_CREDITS,
+      value: 0,
+    });
+  } catch (error) {
     console.error("[OnDemandContent] Failed to refund AI credit", {
       organizationId,
       error,
