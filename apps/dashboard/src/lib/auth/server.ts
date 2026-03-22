@@ -256,6 +256,34 @@ export const auth = betterAuth({
         },
       }
     : undefined,
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+    storage: "secondary-storage",
+    customRules: {
+      "/sign-in/email": {
+        window: 60,
+        max: 5,
+      },
+      "/sign-up/email": {
+        window: 60,
+        max: 5,
+      },
+      "/forget-password": {
+        window: 60,
+        max: 3,
+      },
+      "/reset-password/*": {
+        window: 60,
+        max: 5,
+      },
+      "/email-otp/*": {
+        window: 60,
+        max: 5,
+      },
+    },
+  },
   trustedOrigins: [
     "http://localhost:3000",
     "https://app.usenotra.com",
