@@ -98,15 +98,15 @@
                   "GET /v1/posts",
                   "GET /v1/posts/{postId}",
                   "PATCH /v1/posts/{postId}",
-                  "DELETE /v1/posts/{postId}"
-                ]
-              },
-              {
-                "group": "Generation",
-                "expanded": true,
-                "pages": [
-                  "POST /v1/posts/generate",
-                  "GET /v1/posts/generate/{jobId}"
+                  "DELETE /v1/posts/{postId}",
+                  {
+                    "group": "Generation",
+                    "expanded": true,
+                    "pages": [
+                      "POST /v1/posts/generate",
+                      "GET /v1/posts/generate/{jobId}"
+                    ]
+                  }
                 ]
               },
               {
