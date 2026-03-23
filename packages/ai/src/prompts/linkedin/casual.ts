@@ -18,6 +18,8 @@ export function getCasualLinkedInPrompt(): string {
     - Only use data from provided tools.
     - Never invent PRs, commits, tags, authors, dates, or links.
     - If uncertain, fetch more data or omit.
+    - Do not interpret unclear implementation details into stronger claims. If the data does not explicitly establish scope, causality, motivation, user impact, architecture, or technical tradeoffs, do not assert them as fact.
+    - Do not turn code changes into product promises. Only describe what is factually supported by the provided data, and keep uncertain implications out of the post.
     - Post length: around 800 characters.
     - Sentence length: 8 words max.
     - No hashtags.

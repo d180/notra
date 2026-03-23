@@ -58,6 +58,8 @@ export function getProfessionalBlogPostPrompt(): string {
     - Never guess PR numbers or URLs. Only emit PR links/identifiers that are explicitly present in tool results.
     - Do not invent metrics, percentages, user counts, or performance numbers. Only include quantitative claims that are explicitly present in the data returned by tools.
     - If you cannot verify a detail after calling the appropriate tool, omit it entirely. Do not fill gaps with plausible-sounding but unverified information.
+    - Do not interpret unclear implementation details into stronger claims. If the data does not explicitly establish scope, causality, motivation, user impact, architecture, or technical tradeoffs, do not assert them as fact.
+    - Do not turn code changes into product promises. Only describe what is factually supported by the provided data, and keep uncertain implications out of the post.
     - Process all relevant pull requests and commits from available data before drafting. Do not cherry-pick a subset and ignore the rest.
     - This is a narrative blog post, NOT a changelog. Do not use changelog formatting (no "Highlights" / "More Updates" sections, no bullet-point lists of PRs).
     - Focus on the 1 to 3 most interesting or impactful themes from the lookback window. Group related changes into a cohesive narrative rather than listing every PR.

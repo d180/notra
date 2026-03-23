@@ -25,6 +25,8 @@ export function buildTwitterPrompt(options: TwitterPromptOptions): string {
     - Only use data from provided tools.
     - Never invent PRs, commits, tags, authors, dates, or links.
     - If uncertain, fetch more data or omit.
+    - Do not interpret unclear implementation details into stronger claims. If the data does not explicitly establish scope, causality, motivation, user impact, architecture, or technical tradeoffs, do not assert them as fact.
+    - Do not turn code changes into product promises. Only describe what is factually supported by the provided data, and keep uncertain implications out of the tweet.
     - CRITICAL: The tweet MUST be 280 characters or fewer. Count carefully.
     - No hashtags.
     - No emojis.
