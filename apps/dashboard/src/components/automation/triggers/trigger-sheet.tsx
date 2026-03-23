@@ -45,6 +45,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { BrandVoiceCombobox } from "@/components/brand-voice-combobox";
+import { AddRepositoryButton } from "@/components/integrations/add-repository-button";
 import type {
   LookbackWindow,
   OutputContentType,
@@ -231,19 +232,26 @@ export function AddTriggerDialog({
 
   const brandVoices = brandResponse?.voices ?? [];
 
-  const repositories = useMemo(
-    () =>
-      integrationsResponse?.integrations
-        .filter((integration) => integration.type === "github")
-        .flatMap((integration) => integration.repositories) ?? [],
-    [integrationsResponse]
-  );
+  const { repositories, githubIntegrationId } = useMemo(() => {
+    const githubIntegrations =
+      integrationsResponse?.integrations.filter(
+        (integration) => integration.type === "github"
+      ) ?? [];
+    return {
+      repositories: githubIntegrations.flatMap(
+        (integration) => integration.repositories
+      ),
+      githubIntegrationId: githubIntegrations[0]?.id,
+    };
+  }, [integrationsResponse]);
 
   const repositoryOptions = useMemo(
     () =>
       repositories.map((repo) => ({
         value: repo.id,
-        label: `${repo.owner}/${repo.repo}`,
+        label: repo.defaultBranch
+          ? `${repo.owner}/${repo.repo} · ${repo.defaultBranch}`
+          : `${repo.owner}/${repo.repo}`,
       })),
     [repositories]
   );
@@ -558,8 +566,16 @@ export function AddTriggerDialog({
                     </Label>
                     {isLoadingRepos && <Skeleton className="h-10 w-full" />}
                     {!isLoadingRepos && repositories.length === 0 && (
-                      <div className="rounded-md border border-dashed p-3 text-muted-foreground text-xs">
-                        Add a GitHub repository first to select targets.
+                      <div className="flex items-center gap-2 rounded-md border border-dashed p-3">
+                        <span className="flex-1 text-muted-foreground text-xs">
+                          No repositories connected.
+                        </span>
+                        <AddRepositoryButton
+                          githubIntegrationId={githubIntegrationId}
+                          onCloseDialog={() => setOpen(true)}
+                          onOpenDialog={() => setOpen(false)}
+                          organizationId={organizationId}
+                        />
                       </div>
                     )}
                     {!isLoadingRepos && repositories.length > 0 && (

@@ -138,3 +138,10 @@ export interface WebhookSetupDialogProps {
   onOpenChange?: (open: boolean) => void;
   trigger?: React.ReactNode;
 }
+
+export interface AddRepositoryButtonProps {
+  organizationId: string;
+  githubIntegrationId: string | undefined;
+  onOpenDialog?: () => void;
+  onCloseDialog?: () => void;
+}

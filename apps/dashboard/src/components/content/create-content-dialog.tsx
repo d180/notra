@@ -108,6 +108,7 @@ const EVENT_ICON: Record<EventType, typeof GitPullRequestIcon> = {
 
 import { getOutputTypeLabel, OutputTypeIcon } from "@/utils/output-types";
 import { QUERY_KEYS } from "@/utils/query-keys";
+import { AddRepositoryButton } from "@/components/integrations/add-repository-button";
 
 interface CreateContentDialogProps {
   organizationId: string;
@@ -182,19 +183,24 @@ export function CreateContentDialog({
     enabled: !!organizationId,
   });
 
-  const { repositories, repositoryOptions } = useMemo(() => {
-    const repos =
-      integrationsResponse?.integrations
-        .filter((i) => i.type === "github")
-        .flatMap((i) => i.repositories) ?? [];
-    return {
-      repositories: repos,
-      repositoryOptions: repos.map((r) => ({
-        value: r.id,
-        label: `${r.owner}/${r.repo}`,
-      })),
-    };
-  }, [integrationsResponse]);
+  const { repositories, repositoryOptions, githubIntegrationId } =
+    useMemo(() => {
+      const githubIntegrations =
+        integrationsResponse?.integrations.filter(
+          (i) => i.type === "github"
+        ) ?? [];
+      const repos = githubIntegrations.flatMap((i) => i.repositories);
+      return {
+        repositories: repos,
+        repositoryOptions: repos.map((r) => ({
+          value: r.id,
+          label: r.defaultBranch
+            ? `${r.owner}/${r.repo} · ${r.defaultBranch}`
+            : `${r.owner}/${r.repo}`,
+        })),
+        githubIntegrationId: githubIntegrations[0]?.id,
+      };
+    }, [integrationsResponse]);
 
   const repositoryIds = useStore(form.store, (s) => s.values.repositoryIds);
   const lookbackWindow = useStore(form.store, (s) => s.values.lookbackWindow);
@@ -751,8 +757,16 @@ export function CreateContentDialog({
                       <Label htmlFor={field.name}>Repositories</Label>
                       {isLoadingRepos && <Skeleton className="h-10 w-full" />}
                       {!isLoadingRepos && repositories.length === 0 && (
-                        <div className="rounded-md border border-dashed p-3 text-muted-foreground text-xs">
-                          Add a GitHub repository first to scope content.
+                        <div className="flex items-center gap-2 rounded-md border border-dashed p-3">
+                          <span className="flex-1 text-muted-foreground text-xs">
+                            No repositories connected.
+                          </span>
+                          <AddRepositoryButton
+                            githubIntegrationId={githubIntegrationId}
+                            onCloseDialog={() => setOpen(true)}
+                            onOpenDialog={() => setOpen(false)}
+                            organizationId={organizationId}
+                          />
                         </div>
                       )}
                       {!isLoadingRepos && repositories.length > 0 && (
