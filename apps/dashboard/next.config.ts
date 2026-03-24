@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname, "../.."),
   },
-  transpilePackages: ["@notra/db", "@notra/ui", "@notra/email"],
+  transpilePackages: ["@notra/db", "@notra/ui", "@notra/email", "@notra/ai", "@notra/content-generation"],
   async redirects() {
     return [
       {
@@ -40,37 +40,6 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
-    const cspDirectives = [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' cal.com app.cal.com va.vercel-scripts.com databuddy.cc *.databuddy.cc",
-      "style-src 'self' 'unsafe-inline'",
-      "font-src 'self'",
-      [
-        "img-src 'self' data: blob:",
-        "api.dicebear.com",
-        "icons.duckduckgo.com",
-        "pbs.twimg.com",
-        "avatars.githubusercontent.com",
-        "databuddy.cc",
-        "*.databuddy.cc",
-        "*.r2.cloudflarestorage.com",
-        "*.cloudflarestorage.com",
-        "*.r2.dev",
-        process.env.CLOUDFLARE_PUBLIC_URL
-          ? new URL(process.env.CLOUDFLARE_PUBLIC_URL).hostname
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" "),
-      "connect-src 'self' databuddy.cc *.databuddy.cc",
-      "frame-src 'self' cal.com app.cal.com",
-      "frame-ancestors 'none'",
-      "object-src 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "upgrade-insecure-requests",
-    ];
-
     return [
       {
         source: "/(.*)",
@@ -98,10 +67,6 @@ const nextConfig: NextConfig = {
           {
             key: "X-DNS-Prefetch-Control",
             value: "on",
-          },
-          {
-            key: "Content-Security-Policy",
-            value: cspDirectives.join("; "),
           },
         ],
       },
