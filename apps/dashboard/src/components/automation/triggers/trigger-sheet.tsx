@@ -46,6 +46,8 @@ import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { BrandVoiceCombobox } from "@/components/brand-voice-combobox";
 import { AddRepositoryButton } from "@/components/integrations/add-repository-button";
+import { AddIntegrationDialog } from "@/components/integrations/add-integration-dialog";
+import { AddRepositoryDialog } from "@/components/integrations/add-repository-dialog";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import type {
   LookbackWindow,
@@ -146,6 +148,7 @@ export function AddTriggerDialog({
       ? initialSourceType
       : (availableSourceOptions[0]?.value ?? "github_webhook");
 
+  const [addRepoOpen, setAddRepoOpen] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
@@ -353,7 +356,7 @@ export function AddTriggerDialog({
     [form, setOpen]
   );
 
-  return (
+  return (<>
     <Sheet onOpenChange={handleOpenChange} open={open}>
       {trigger ? (
         <SheetTrigger render={trigger} />
@@ -577,10 +580,10 @@ export function AddTriggerDialog({
                           No repositories connected.
                         </span>
                         <AddRepositoryButton
-                          githubIntegrationId={githubIntegrationId}
-                          onCloseDialog={() => setOpen(true)}
-                          onOpenDialog={() => setOpen(false)}
-                          organizationId={organizationId}
+                          onAdd={() => {
+                            setOpen(false);
+                            setAddRepoOpen(true);
+                          }}
                         />
                       </div>
                     )}
@@ -767,5 +770,29 @@ export function AddTriggerDialog({
         </form>
       </SheetContent>
     </Sheet>
-  );
+    {githubIntegrationId ? (
+      <AddRepositoryDialog
+        integrationId={githubIntegrationId}
+        onOpenChange={(isOpen) => {
+          setAddRepoOpen(isOpen);
+          if (!isOpen) {
+            setOpen(true);
+          }
+        }}
+        open={addRepoOpen}
+        organizationId={organizationId}
+      />
+    ) : (
+      <AddIntegrationDialog
+        onOpenChange={(isOpen) => {
+          setAddRepoOpen(isOpen);
+          if (!isOpen) {
+            setOpen(true);
+          }
+        }}
+        open={addRepoOpen}
+        organizationId={organizationId}
+      />
+    )}
+  </>);
 }

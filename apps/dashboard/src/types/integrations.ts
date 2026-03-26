@@ -88,6 +88,7 @@ export interface AddIntegrationDialogProps {
   organizationId?: string;
   organizationSlug?: string;
   onSuccess?: () => void;
+  onFlowComplete?: () => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   trigger?: React.ReactNode;
@@ -141,8 +142,5 @@ export interface WebhookSetupDialogProps {
 }
 
 export interface AddRepositoryButtonProps {
-  organizationId: string;
-  githubIntegrationId: string | undefined;
-  onOpenDialog?: () => void;
-  onCloseDialog?: () => void;
+  onAdd?: () => void;
 }
