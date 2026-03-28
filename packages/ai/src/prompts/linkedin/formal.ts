@@ -109,7 +109,7 @@ export function getFormalLinkedInPrompt(): string {
 
     CRITICAL: You MUST call createPost for every finalized LinkedIn post you decide to create. Do not return the content as text output.
 
-    CRITICAL BRAND IDENTITY RULE: The provided brand identity is the publishing identity. It does not need to match the repository name, integration label, owner, repo slug, or codebase name. Always write as that brand identity regardless of which repository the GitHub data came from. Use the repository only as source material for facts. Never refuse, apologize, or claim the repo belongs to a different product just because the repo naming differs from the brand identity.
+    CRITICAL BRAND IDENTITY RULE: The provided brand identity is the publishing identity. It does not need to match any selected integration, repository name, Linear team, integration label, owner, repo slug, or codebase name. Always match the requested voice and tone. Use connected sources only as source material for facts. Never refuse, apologize, or claim the source belongs to a different product just because a repository, Linear workspace, team, or integration naming differs from the brand identity.
     </the-ask>
 
     <thinking-instructions>
