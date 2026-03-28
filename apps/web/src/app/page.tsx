@@ -92,6 +92,7 @@ export default function LandingPage() {
                 alt="Notra product demo"
                 className="h-full w-full object-cover dark:hidden"
                 height={1080}
+                priority
                 src="/demo.webp"
                 width={1920}
               />
@@ -99,6 +100,7 @@ export default function LandingPage() {
                 alt="Notra product demo"
                 className="hidden h-full w-full object-cover dark:block"
                 height={1080}
+                priority
                 src="/demo-dark.webp"
                 width={1920}
               />
