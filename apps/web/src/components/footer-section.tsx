@@ -4,7 +4,7 @@ import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
 import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
 import Link from "next/link";
-import { FOOTER_PRODUCT_LINKS } from "@/utils/navigation";
+import { FOOTER_EXTENSION_LINKS, FOOTER_PRODUCT_LINKS } from "@/utils/navigation";
 import { SOCIAL_LINKS } from "../utils/constants";
 import { HatchPattern } from "./hatch-pattern";
 import { NotraMark } from "./notra-mark";
@@ -80,6 +80,25 @@ export default function FooterSection() {
                   key={link.href}
                   rel={"rel" in link ? link.rel : undefined}
                   target={"target" in link ? link.target : undefined}
+                >
+                  {link.label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex min-w-30 flex-1 flex-col items-start justify-start gap-3">
+            <div className="self-stretch font-medium font-sans text-foreground/50 text-sm leading-5">
+              Extensions
+            </div>
+            <div className="flex flex-col items-start justify-end gap-2">
+              {FOOTER_EXTENSION_LINKS.map((link) => (
+                <Link
+                  className="font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary"
+                  href={link.href}
+                  key={link.href}
+                  rel={link.rel}
+                  target={link.target}
                 >
                   {link.label}
                 </Link>
