@@ -393,7 +393,10 @@ export const auth = betterAuth({
               orgName: org.name,
             });
           } catch (attachError) {
-            console.error("[Autumn] Failed to attach basic trial:", attachError);
+            console.error(
+              "[Autumn] Failed to attach basic trial:",
+              attachError
+            );
           }
         },
       },

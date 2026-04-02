@@ -38,6 +38,7 @@ import {
   calculateTopupFee,
   calculateTopupTotal,
   dollarsToCredits,
+  FEATURES,
   TOPUP_MAX_DOLLARS,
   TOPUP_MIN_DOLLARS,
 } from "@/constants/features";
@@ -138,6 +139,20 @@ function getProductFeatures(plan: BillingPlan | undefined): ProductFeature[] {
       }
 
       const overageText = item.display?.secondaryText;
+
+      const isAiCredits = item.featureId === FEATURES.AI_CREDITS;
+
+      if (isAiCredits) {
+        const cents = item.included ?? 0;
+        if (cents > 0) {
+          const dollars = new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+          }).format(cents / 100);
+          return { text: `${dollars} AI Credits`, overageText };
+        }
+        return null;
+      }
 
       if (displayText) {
         return { text: displayText, overageText };

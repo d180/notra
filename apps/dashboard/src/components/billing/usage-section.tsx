@@ -38,6 +38,13 @@ function formatNumber(value: number) {
   }).format(value);
 }
 
+function formatDollars(cents: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(cents / 100);
+}
+
 function formatFeatureName(id: string): string {
   return id.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
@@ -159,7 +166,7 @@ export function UsageSection() {
           <TitleCard accentColor="#8b5cf6" heading="Credits Used">
             <div className="flex items-baseline gap-2">
               <p className="font-bold text-3xl tabular-nums tracking-tight">
-                {formatNumber(totalUsage)}
+                {formatDollars(totalUsage)}
               </p>
               <p className="text-muted-foreground text-sm">
                 in selected period
@@ -170,12 +177,12 @@ export function UsageSection() {
             <div className="flex items-baseline gap-2">
               <p className="font-bold text-3xl tabular-nums tracking-tight">
                 {aiCreditsFeature.balance !== null
-                  ? formatNumber(aiCreditsFeature.balance)
+                  ? formatDollars(aiCreditsFeature.balance)
                   : "-"}
               </p>
               <p className="text-muted-foreground text-sm">
                 {aiCreditsFeature.included
-                  ? `of ${formatNumber(aiCreditsFeature.included)}`
+                  ? `of ${formatDollars(aiCreditsFeature.included)}`
                   : "available"}
               </p>
             </div>
