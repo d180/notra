@@ -116,91 +116,86 @@ export const POST = withEvlog(async function POST(
 
     const autumnClient = autumn;
 
-    try {
-      const { stream, routingDecision } = await orchestrateChat(
-        {
-          organizationId,
-          messages,
-          currentMarkdown,
-          contentType,
-          selection,
-          context,
-          maxSteps: 5,
-          log,
+    const { stream, routingDecision } = await orchestrateChat(
+      {
+        organizationId,
+        messages,
+        currentMarkdown,
+        contentType,
+        selection,
+        context,
+        maxSteps: 5,
+        log,
+      },
+      {
+        integrationFetchers: {
+          getGitHubIntegrationById,
+          getLinearIntegrationById,
         },
-        {
-          integrationFetchers: {
-            getGitHubIntegrationById,
-            getLinearIntegrationById,
-          },
-          resolveContext: getGitHubToolRepositoryContextByIntegrationId,
-          resolveLinearContext: getLinearToolContextByIntegrationId,
-          onUsage(usage, modelId) {
-            if (!autumnClient) {
-              return;
-            }
-
-            const costCents = calculateTokenCostCents(
-              {
-                inputTokens: usage.inputTokens ?? 0,
-                outputTokens: usage.outputTokens ?? 0,
-                totalTokens: usage.totalTokens ?? 0,
-                cacheReadTokens: usage.inputTokenDetails?.cacheReadTokens ?? 0,
-                cacheWriteTokens:
-                  usage.inputTokenDetails?.cacheWriteTokens ?? 0,
-              },
-              modelId,
-              useMarkup
-            );
-
-            autumnClient
-              .track({
-                customerId: organizationId,
-                featureId: FEATURES.AI_CREDITS,
-                value: costCents,
-                properties: {
-                  source: "chat",
-                  content_id: contentId,
-                  model: modelId,
-                  input_tokens: usage.inputTokens ?? 0,
-                  output_tokens: usage.outputTokens ?? 0,
-                  cache_read_tokens:
-                    usage.inputTokenDetails?.cacheReadTokens ?? 0,
-                  cache_write_tokens:
-                    usage.inputTokenDetails?.cacheWriteTokens ?? 0,
-                  total_tokens: usage.totalTokens ?? 0,
-                  cost_cents: costCents,
-                },
-              })
-              .catch((trackError) => {
-                console.error("[Autumn] Track error after chat completion:", {
-                  requestId,
-                  customerId: organizationId,
-                  error: trackError,
-                });
-              });
-          },
-          log,
-        }
-      );
-
-      console.log("[Content Chat] Routing decision:", {
-        requestId,
-        decision: routingDecision,
-      });
-
-      return stream.toUIMessageStreamResponse({
-        onError: (error) => {
-          console.error("[Content Chat] Stream error:", { requestId, error });
-          if (error instanceof Error) {
-            return error.message;
+        resolveContext: getGitHubToolRepositoryContextByIntegrationId,
+        resolveLinearContext: getLinearToolContextByIntegrationId,
+        onUsage(usage, modelId) {
+          if (!autumnClient) {
+            return;
           }
-          return "An error occurred while processing your request.";
+
+          const costCents = calculateTokenCostCents(
+            {
+              inputTokens: usage.inputTokens ?? 0,
+              outputTokens: usage.outputTokens ?? 0,
+              totalTokens: usage.totalTokens ?? 0,
+              cacheReadTokens: usage.inputTokenDetails?.cacheReadTokens ?? 0,
+              cacheWriteTokens: usage.inputTokenDetails?.cacheWriteTokens ?? 0,
+            },
+            modelId,
+            useMarkup
+          );
+
+          autumnClient
+            .track({
+              customerId: organizationId,
+              featureId: FEATURES.AI_CREDITS,
+              value: costCents,
+              properties: {
+                source: "chat",
+                content_id: contentId,
+                model: modelId,
+                input_tokens: usage.inputTokens ?? 0,
+                output_tokens: usage.outputTokens ?? 0,
+                cache_read_tokens:
+                  usage.inputTokenDetails?.cacheReadTokens ?? 0,
+                cache_write_tokens:
+                  usage.inputTokenDetails?.cacheWriteTokens ?? 0,
+                total_tokens: usage.totalTokens ?? 0,
+                cost_cents: costCents,
+              },
+            })
+            .catch((trackError) => {
+              console.error("[Autumn] Track error after chat completion:", {
+                requestId,
+                customerId: organizationId,
+                error: trackError,
+              });
+            });
         },
-      });
-    } catch (orchestrationError) {
-      throw orchestrationError;
-    }
+        log,
+      }
+    );
+
+    console.log("[Content Chat] Routing decision:", {
+      requestId,
+      decision: routingDecision,
+    });
+
+    return stream.toUIMessageStreamResponse({
+      onError: (error) => {
+        console.error("[Content Chat] Stream error:", { requestId, error });
+        if (error instanceof Error) {
+          return error.message;
+        }
+        return "An error occurred while processing your request.";
+      },
+    });
   } catch (e) {
     console.error("[Content Chat] Error:", {
       requestId,
