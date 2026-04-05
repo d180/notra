@@ -1,5 +1,6 @@
 import { db } from "@notra/db/drizzle";
 import { members, organizations, sessions } from "@notra/db/schema";
+import type { CheckResponse } from "autumn-js";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
@@ -30,7 +31,6 @@ import {
 import { redis } from "@/lib/redis";
 import { generateOrganizationAvatar } from "@/lib/utils";
 import { organizationSlugSchema } from "@/schemas/organization";
-import type { AutumnCheckResponse } from "@/types/autumn";
 
 const nanoid = customAlphabet("abcdefghijklmnopqrstuvwxyz0123456789", 6);
 
@@ -39,7 +39,7 @@ async function enforceTeamMembersLimit(organizationId?: string | null) {
     return;
   }
 
-  let data: AutumnCheckResponse | null = null;
+  let data: CheckResponse | null = null;
   try {
     data = await autumn.check({
       customerId: organizationId,
@@ -383,10 +383,17 @@ export const auth = betterAuth({
             },
           });
 
-          console.log("[Autumn] Customer created successfully:", {
-            orgId: org.id,
-            orgName: org.name,
-          });
+          try {
+            await autumn.billing.attach({
+              customerId: org.id,
+              planId: "basic",
+            });
+          } catch (attachError) {
+            console.error(
+              "[Autumn] Failed to attach basic trial:",
+              attachError
+            );
+          }
         },
       },
     },

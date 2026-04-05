@@ -25,6 +25,11 @@ import {
   TabsTrigger,
 } from "@notra/ui/components/ui/tabs";
 import { TitleCard } from "@notra/ui/components/ui/title-card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@notra/ui/components/ui/tooltip";
 import { cn } from "@notra/ui/lib/utils";
 import { useCustomer, useListPlans } from "autumn-js/react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
@@ -33,6 +38,8 @@ import { toast } from "sonner";
 import { UsageSection } from "@/components/billing/usage-section";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { FEATURES } from "@/constants/features";
+import { MARKUP_PERCENT } from "@/lib/billing/token-pricing";
 import type { ProductFeature } from "@/types/hooks/billing";
 
 const BILLING_SECTION_VALUES = ["billing", "usage"] as const;
@@ -51,8 +58,11 @@ const SCENARIO_TEXT: Record<string, string> = {
 
 const INVOICE_PRODUCT_NAME_MAP: Record<string, string> = {
   free: "Free",
-  pro: "Pro Monthly",
-  pro_yearly: "Pro Yearly",
+  basic: "Basic",
+  basic_yearly: "Basic",
+  pro: "Pro",
+  pro_yearly: "Pro",
+  ai_credits_top_up: "AI Credits Top-up",
 };
 
 const INVOICE_TABLE_COLUMN_COUNT = 4;
@@ -115,6 +125,24 @@ function getProductFeatures(plan: BillingPlan | undefined): ProductFeature[] {
 
       const overageText = item.display?.secondaryText;
 
+      const isAiCredits = item.featureId === FEATURES.AI_CREDITS;
+
+      if (isAiCredits) {
+        const cents = item.included ?? 0;
+        if (cents > 0) {
+          const dollars = new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+          }).format(cents / 100);
+          return {
+            text: `${dollars} AI Credits`,
+            overageText: `${MARKUP_PERCENT}% platform fee on top-ups`,
+            overageTooltip: `Plan-included credits are charged at cost. A ${MARKUP_PERCENT}% fee is applied only on purchased top-up credits.`,
+          };
+        }
+        return null;
+      }
+
       if (displayText) {
         return { text: displayText, overageText };
       }
@@ -161,7 +189,7 @@ export default function BillingPage() {
     parseAsStringLiteral(BILLING_SECTION_VALUES).withDefault("billing")
   );
   const [loading, setLoading] = useState<string | null>(null);
-  const [isYearly, setIsYearly] = useState(true);
+  const [isYearly, setIsYearly] = useState(false);
   const [dateSortOrder, setDateSortOrder] = useState<"asc" | "desc">("desc");
   const invoiceListId = useId();
   const freeFeatureListId = useId();
@@ -184,12 +212,14 @@ export default function BillingPage() {
     activeSubscription?.plan?.id ?? activeSubscription?.planId;
 
   useEffect(() => {
-    if (activePlanId === "pro") {
+    if (activePlanId === "pro_yearly" || activePlanId === "basic_yearly") {
+      setIsYearly(true);
+    } else if (activePlanId === "pro" || activePlanId === "basic") {
       setIsYearly(false);
     }
   }, [activePlanId]);
 
-  const isFree = activePlanId === "free";
+  const isBasic = activePlanId === "basic" || activePlanId === "basic_yearly";
   const isPro = activePlanId === "pro" || activePlanId === "pro_yearly";
   const isTrialing =
     activeSubscription?.trialEndsAt != null &&
@@ -227,7 +257,15 @@ export default function BillingPage() {
 
   const isBillingLoading = plansLoading || customerLoading;
 
-  const freePlan = plans?.find((plan) => plan.id === "free");
+  const basicMonthlyPlan = plans?.find((plan) => plan.id === "basic");
+  const basicYearlyPlan = plans?.find((plan) => plan.id === "basic_yearly");
+  const basicPlan = isYearly
+    ? (basicYearlyPlan ?? basicMonthlyPlan)
+    : basicMonthlyPlan;
+  const basicPrice = basicPlan
+    ? getProductPrice(basicPlan)
+    : { amount: 0, interval: isYearly ? "year" : "month" };
+
   const proMonthlyPlan = plans?.find((plan) => plan.id === "pro");
   const proYearlyPlan = plans?.find((plan) => plan.id === "pro_yearly");
   const proPlan = isYearly ? proYearlyPlan : proMonthlyPlan;
@@ -235,38 +273,40 @@ export default function BillingPage() {
     ? getProductPrice(proPlan)
     : { amount: 0, interval: isYearly ? "year" : "month" };
 
-  const freeFeatures = getProductFeatures(freePlan);
+  const basicFeatures = getProductFeatures(basicPlan);
   const proFeatures = getProductFeatures(proPlan);
 
   function handleSectionChange(value: string) {
     setActiveSection(value === "usage" ? "usage" : "billing");
   }
 
-  function renderFreePlanButton() {
-    if (freePlan && isFree) {
+  function renderBasicPlanButton() {
+    if (basicPlan && isBasic) {
       return (
         <Button className="w-full" disabled variant="outline">
-          Current Plan
+          {isTrialing ? "Trial Active" : "Current Plan"}
         </Button>
       );
     }
 
-    if (freePlan) {
+    if (basicPlan) {
       return (
         <Button
           className="w-full"
           disabled={loading !== null}
-          onClick={() => handleCheckout(freePlan.id)}
+          onClick={() => handleCheckout(basicPlan.id)}
           variant="outline"
         >
-          {loading === freePlan.id ? "Loading..." : "Downgrade to Free"}
+          {loading === basicPlan.id
+            ? "Loading..."
+            : getPricingButtonText(basicPlan)}
         </Button>
       );
     }
 
     return (
       <Button className="w-full" disabled variant="outline">
-        Current Plan
+        Basic
       </Button>
     );
   }
@@ -281,15 +321,14 @@ export default function BillingPage() {
     }
 
     if (proPlan) {
+      const proButtonText = isBasic ? "Upgrade" : getPricingButtonText(proPlan);
       return (
         <Button
           className="w-full"
           disabled={loading !== null}
           onClick={() => handleCheckout(proPlan.id)}
         >
-          {loading === proPlan.id
-            ? "Loading..."
-            : getPricingButtonText(proPlan)}
+          {loading === proPlan.id ? "Loading..." : proButtonText}
         </Button>
       );
     }
@@ -333,7 +372,7 @@ export default function BillingPage() {
                     <div>
                       <h2 className="font-semibold text-lg">Plans</h2>
                       <p className="text-muted-foreground text-sm">
-                        Upgrade or change your plan. Pro includes a 3 day free
+                        Upgrade or change your plan. Basic includes a 3 day free
                         trial
                       </p>
                     </div>
@@ -358,19 +397,28 @@ export default function BillingPage() {
 
                   <div className="grid gap-6 lg:grid-cols-2">
                     <TitleCard
-                      action={isFree && <Badge>Current</Badge>}
+                      action={
+                        <div className="flex items-center gap-2">
+                          {isBasic && (
+                            <Badge variant={isTrialing ? "outline" : "default"}>
+                              {isTrialing ? "Trial" : "Current"}
+                            </Badge>
+                          )}
+                        </div>
+                      }
                       className={cn(
-                        isFree && "ring-2 ring-primary",
-                        !isFree &&
-                          freePlan &&
+                        isBasic && "ring-2 ring-primary",
+                        !isBasic &&
+                          basicPlan &&
                           "transition-all hover:ring-2 hover:ring-muted-foreground/20"
                       )}
-                      heading={freePlan?.name ?? "Free"}
+                      heading="Basic"
                     >
                       <div className="space-y-4">
                         <div>
                           <p className="text-muted-foreground text-sm">
-                            {freePlan?.description ?? "For Hobbyists"}
+                            {basicPlan?.description ??
+                              "For solo devs and small teams"}
                           </p>
                           <div className="mt-2 flex items-end">
                             <span className="font-bold text-3xl leading-none">
@@ -382,19 +430,18 @@ export default function BillingPage() {
                               gap={0}
                               gradientHeight={0}
                               padding={0}
-                              places={[1]}
-                              value={0}
+                              value={basicPrice.amount}
                             />
                             <span className="mb-0.5 ml-1 font-normal text-muted-foreground text-sm">
-                              /month
+                              /{isYearly ? "year" : "month"}
                             </span>
                           </div>
                         </div>
 
-                        {renderFreePlanButton()}
+                        {renderBasicPlanButton()}
 
                         <ul className="space-y-2.5 pt-2">
-                          {freeFeatures.map((feature) => (
+                          {basicFeatures.map((feature) => (
                             <li
                               className="flex items-start gap-2 text-sm"
                               key={`${freeFeatureListId}-${feature.text}`}
@@ -405,11 +452,24 @@ export default function BillingPage() {
                               />
                               <div>
                                 <span>{feature.text}</span>
-                                {feature.overageText && (
-                                  <p className="text-muted-foreground text-xs">
-                                    {feature.overageText}
-                                  </p>
-                                )}
+                                {feature.overageText &&
+                                  (feature.overageTooltip ? (
+                                    <Tooltip>
+                                      <TooltipTrigger
+                                        className="cursor-help border-muted-foreground/30 border-b border-dashed text-muted-foreground text-xs"
+                                        render={<p />}
+                                      >
+                                        {feature.overageText}
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-[14rem]">
+                                        {feature.overageTooltip}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <p className="text-muted-foreground text-xs">
+                                      {feature.overageText}
+                                    </p>
+                                  ))}
                               </div>
                             </li>
                           ))}
@@ -472,11 +532,24 @@ export default function BillingPage() {
                               />
                               <div>
                                 <span>{feature.text}</span>
-                                {feature.overageText && (
-                                  <p className="text-muted-foreground text-xs">
-                                    {feature.overageText}
-                                  </p>
-                                )}
+                                {feature.overageText &&
+                                  (feature.overageTooltip ? (
+                                    <Tooltip>
+                                      <TooltipTrigger
+                                        className="cursor-help border-muted-foreground/30 border-b border-dashed text-muted-foreground text-xs"
+                                        render={<p />}
+                                      >
+                                        {feature.overageText}
+                                      </TooltipTrigger>
+                                      <TooltipContent className="max-w-[14rem]">
+                                        {feature.overageTooltip}
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <p className="text-muted-foreground text-xs">
+                                      {feature.overageText}
+                                    </p>
+                                  ))}
                               </div>
                             </li>
                           ))}

@@ -5,6 +5,7 @@ import { sanitizeMarkdownHtml } from "@notra/ai/utils/sanitize";
 import { createContentGenerationRequestSchema } from "@notra/content-generation/schemas";
 import { db } from "@notra/db/drizzle";
 import { githubIntegrations, posts } from "@notra/db/schema";
+import type { CheckResponse } from "autumn-js";
 import { eachDayOfInterval, endOfYear, format, startOfYear } from "date-fns";
 import {
   and,
@@ -27,6 +28,8 @@ import {
 import { FEATURES } from "@/constants/features";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { autumn } from "@/lib/billing/autumn";
+import { assertActiveSubscription } from "@/lib/billing/subscription";
+import { shouldApplyMarkup } from "@/lib/billing/token-pricing";
 import {
   addActiveGeneration,
   clearCompletedGeneration,
@@ -46,7 +49,6 @@ import type { ContentResponse, PostsResponse } from "@/schemas/content";
 import { updateContentSchema } from "@/schemas/content";
 import { clearCompletedGenerationSchema } from "@/schemas/generations";
 import { LOOKBACK_WINDOWS } from "@/schemas/integrations";
-import type { AutumnCheckResponse } from "@/types/autumn";
 import { resolveLookbackRange } from "@/utils/lookback";
 import {
   badRequest,
@@ -578,6 +580,7 @@ export const contentRouter = {
         headers: context.headers,
         organizationId: input.organizationId,
       });
+      await assertActiveSubscription(input.organizationId);
 
       const existingPost = await db.query.posts.findFirst({
         where: and(
@@ -1045,6 +1048,7 @@ export const contentRouter = {
         headers: context.headers,
         organizationId: input.organizationId,
       });
+      await assertActiveSubscription(input.organizationId);
 
       if (
         !input.dataPoints.includePullRequests &&
@@ -1067,17 +1071,17 @@ export const contentRouter = {
         }
       }
 
-      let aiCreditReserved = false;
+      let aiCreditChecked = false;
+      let aiCreditMarkup = false;
 
       if (autumn) {
-        let data: AutumnCheckResponse | null = null;
+        let data: CheckResponse | null = null;
 
         try {
           data = await autumn.check({
             customerId: input.organizationId,
             featureId: FEATURES.AI_CREDITS,
             requiredBalance: 1,
-            sendEvent: true,
           });
         } catch {
           throw internalServerError("Failed to verify AI credits");
@@ -1087,7 +1091,8 @@ export const contentRouter = {
           throw paymentRequired("AI credit limit reached");
         }
 
-        aiCreditReserved = true;
+        aiCreditChecked = true;
+        aiCreditMarkup = shouldApplyMarkup(data?.balance ?? null);
       }
 
       const runId = generateRunId("manual_on_demand");
@@ -1130,7 +1135,8 @@ export const contentRouter = {
         brandVoiceId: input.brandIdentityId ?? input.brandVoiceId,
         dataPoints: input.dataPoints,
         selectedItems: input.selectedItems,
-        aiCreditReserved,
+        aiCreditReserved: aiCreditChecked,
+        aiCreditMarkup,
         source: "dashboard",
       });
 
@@ -1162,6 +1168,7 @@ export const contentRouter = {
           headers: context.headers,
           organizationId: input.organizationId,
         });
+        await assertActiveSubscription(input.organizationId);
 
         await clearCompletedGeneration(input.organizationId, input.runId);
 

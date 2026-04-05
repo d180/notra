@@ -1,6 +1,7 @@
 "use client";
 
 import { SidebarInset, SidebarProvider } from "@notra/ui/components/ui/sidebar";
+import { SubscriptionGate } from "@/components/billing/subscription-gate";
 import { DashboardSidebar } from "@/components/dashboard/app-sidebar";
 import { SiteHeader } from "@/components/dashboard/header";
 import {
@@ -12,12 +13,14 @@ interface DashboardClientWrapperProps {
   children: React.ReactNode;
   initialActiveOrganization?: InitialActiveOrganization | null;
   initialSidebarOpen?: boolean;
+  modal?: React.ReactNode;
 }
 
 export function DashboardClientWrapper({
   children,
   initialActiveOrganization,
   initialSidebarOpen = true,
+  modal,
 }: DashboardClientWrapperProps) {
   return (
     <OrganizationsProvider
@@ -31,10 +34,11 @@ export function DashboardClientWrapper({
         <SidebarInset className="h-svh min-w-0 overflow-hidden">
           <SiteHeader />
           <div className="@container/main flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain">
-            {children}
+            <SubscriptionGate>{children}</SubscriptionGate>
           </div>
         </SidebarInset>
       </SidebarProvider>
+      {modal}
     </OrganizationsProvider>
   );
 }
