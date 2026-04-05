@@ -30,13 +30,11 @@ export function CreditBalanceButton() {
     return null;
   }
 
-  const activeSubscription = customer.subscriptions?.find(
+  const hasActiveSubscription = customer.subscriptions?.some(
     (sub) => !sub.addOn && sub.status === "active"
   );
-  const planId = activeSubscription?.plan?.id ?? activeSubscription?.planId;
-  const isBasic = planId === "basic" || planId === "basic_yearly";
 
-  if (!isBasic) {
+  if (!hasActiveSubscription) {
     return null;
   }
 
