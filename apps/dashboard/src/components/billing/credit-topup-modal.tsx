@@ -17,12 +17,14 @@ interface CreditTopupModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   success?: boolean;
+  onSuccess?: () => void;
 }
 
 export function CreditTopupModal({
   open,
   onOpenChange,
   success,
+  onSuccess,
 }: CreditTopupModalProps) {
   if (success) {
     return (
@@ -83,7 +85,9 @@ export function CreditTopupModal({
             Purchase additional AI credits for your workspace
           </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
-        <CreditTopupContent onSuccess={() => onOpenChange(false)} />
+        <CreditTopupContent
+          onSuccess={onSuccess ?? (() => onOpenChange(false))}
+        />
       </ResponsiveDialogContent>
     </ResponsiveDialog>
   );

@@ -98,6 +98,7 @@ export default function CreditsPageClient() {
   const success = searchParams.get("success") === "true";
   const [range, setRange] = useState<CreditRangeOption>("30d");
   const [topupOpen, setTopupOpen] = useState(false);
+  const [topupSuccess, setTopupSuccess] = useState(false);
 
   const { data: customer, isLoading: customerLoading } = useCustomer({
     expand: ["balances.feature"],
@@ -383,9 +384,15 @@ export default function CreditsPageClient() {
       </div>
 
       <CreditTopupModal
-        onOpenChange={setTopupOpen}
+        onOpenChange={(open) => {
+          setTopupOpen(open);
+          if (!open) {
+            setTopupSuccess(false);
+          }
+        }}
+        onSuccess={() => setTopupSuccess(true)}
         open={topupOpen}
-        success={false}
+        success={topupSuccess}
       />
     </PageContainer>
   );
