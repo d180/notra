@@ -14,6 +14,7 @@ import { getResend } from "@notra/email/utils/resend";
 import type { WorkflowContext } from "@upstash/workflow";
 import { WorkflowAbort } from "@upstash/workflow";
 import { serve } from "@upstash/workflow/nextjs";
+import type { CheckResponse } from "autumn-js";
 import { and, eq } from "drizzle-orm";
 import { FEATURES } from "@/constants/features";
 import { autumn } from "@/lib/billing/autumn";
@@ -45,7 +46,6 @@ import {
   type EventWorkflowPayload,
   eventWorkflowPayloadSchema,
 } from "@/schemas/workflows";
-import type { AutumnCheckResponse } from "@/types/autumn";
 import type { LogRetentionDays } from "@/types/webhooks/webhooks";
 import type {
   EventGenerationResult,
@@ -199,7 +199,7 @@ export const { POST } = serve<EventWorkflowPayload>(
         return { canceled: false, reserved: false, useMarkup: false };
       }
 
-      let data: AutumnCheckResponse | null = null;
+      let data: CheckResponse | null = null;
       try {
         data = await autumn.check({
           customerId: trigger.organizationId,

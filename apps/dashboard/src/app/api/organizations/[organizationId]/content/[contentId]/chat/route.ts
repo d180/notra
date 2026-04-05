@@ -1,4 +1,5 @@
 import { orchestrateChat } from "@notra/ai/orchestration/orchestrate";
+import type { CheckResponse } from "autumn-js";
 import { nanoid } from "nanoid";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -19,7 +20,6 @@ import {
   getLinearToolContextByIntegrationId,
 } from "@/lib/services/linear-integration";
 import { chatRequestSchema } from "@/schemas/content";
-import type { AutumnCheckResponse } from "@/types/autumn";
 
 interface RouteContext {
   params: Promise<{ organizationId: string; contentId: string }>;
@@ -59,7 +59,7 @@ export const POST = withEvlog(async function POST(
         featureId: FEATURES.AI_CREDITS,
       });
 
-      let checkData: AutumnCheckResponse | null = null;
+      let checkData: CheckResponse | null = null;
       try {
         checkData = await autumn.check({
           customerId: organizationId,

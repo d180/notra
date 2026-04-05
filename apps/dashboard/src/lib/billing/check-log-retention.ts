@@ -1,5 +1,4 @@
 import { FEATURES } from "@/constants/features";
-import type { AutumnCheckResponse } from "@/types/autumn";
 import type { LogRetentionDays } from "@/types/webhooks/webhooks";
 import { autumn } from "./autumn";
 

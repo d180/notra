@@ -1,4 +1,5 @@
 import type { AgentTokenUsage } from "@notra/ai/types/agents";
+import type { Balance } from "autumn-js";
 
 export interface ModelPricing {
   inputPerMillionTokens: number;
@@ -68,28 +69,19 @@ export function calculateTokenCostCents(
   return Math.max(costCents, MINIMUM_COST_CENTS);
 }
 
-export function shouldApplyMarkup(
-  balance: {
-    remaining?: number;
-    breakdown?: Array<{
-      remaining: number;
-      reset: { interval: string } | null;
-    }>;
-  } | null
-): boolean {
-  if (!balance || (balance.remaining ?? 0) <= 0) {
+export function shouldApplyMarkup(balance: Balance | null): boolean {
+  if (!balance || balance.remaining <= 0) {
     return false;
   }
 
-  if (!balance.breakdown?.length) {
-    return false;
+  if (balance.breakdown?.length) {
+    const hasRemainingPlanCredits = balance.breakdown.some(
+      (entry) => entry.remaining > 0 && entry.reset?.interval !== "one_off"
+    );
+    return !hasRemainingPlanCredits;
   }
 
-  const hasRemainingPlanCredits = balance.breakdown.some(
-    (entry) => entry.remaining > 0 && entry.reset?.interval !== "one_off"
-  );
-
-  return !hasRemainingPlanCredits;
+  return false;
 }
 
 export function getModelPricing(modelId?: string): ModelPricing {

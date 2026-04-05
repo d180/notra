@@ -5,6 +5,7 @@ import { sanitizeMarkdownHtml } from "@notra/ai/utils/sanitize";
 import { createContentGenerationRequestSchema } from "@notra/content-generation/schemas";
 import { db } from "@notra/db/drizzle";
 import { githubIntegrations, posts } from "@notra/db/schema";
+import type { CheckResponse } from "autumn-js";
 import { eachDayOfInterval, endOfYear, format, startOfYear } from "date-fns";
 import {
   and,
@@ -48,7 +49,6 @@ import type { ContentResponse, PostsResponse } from "@/schemas/content";
 import { updateContentSchema } from "@/schemas/content";
 import { clearCompletedGenerationSchema } from "@/schemas/generations";
 import { LOOKBACK_WINDOWS } from "@/schemas/integrations";
-import type { AutumnCheckResponse } from "@/types/autumn";
 import { resolveLookbackRange } from "@/utils/lookback";
 import {
   badRequest,
@@ -1075,7 +1075,7 @@ export const contentRouter = {
       let aiCreditMarkup = false;
 
       if (autumn) {
-        let data: AutumnCheckResponse | null = null;
+        let data: CheckResponse | null = null;
 
         try {
           data = await autumn.check({
