@@ -1,9 +1,12 @@
 import type { AILogTarget } from "@notra/ai/observability";
 import type { ToneProfile } from "@notra/ai/schemas/brand";
+import type { ContentType } from "@notra/ai/schemas/content";
+import type { AgentType } from "@notra/ai/types/brand-references";
 import type { PostSourceMetadata } from "@notra/db/schema";
 import type { LanguageModelUsage } from "ai";
 import type { PostSummary } from "./posts";
 import type {
+  BaseTonePromptInput,
   BlogPostTonePromptInput,
   ChangelogTonePromptInput,
   LinkedInTonePromptInput,
@@ -52,6 +55,41 @@ export interface ChangelogAgentResult {
   usage?: AgentTokenUsage;
 }
 
+export interface BackgroundGenOptions {
+  organizationId: string;
+  collectionId: string;
+  skillName: string;
+  contentType: ContentType;
+  brandAgentType: AgentType;
+  contentLabel: string;
+  voiceId?: string;
+  repositories: Array<{
+    integrationId: string;
+    owner: string;
+    repo: string;
+    defaultBranch?: string | null;
+  }>;
+  linearIntegrations?: LinearIntegrationRef[];
+  promptInput: BaseTonePromptInput;
+  sourceMetadata?: PostSourceMetadata;
+  dataPointSettings?: AgentDataPointSettings;
+  selectionFilters?: GitHubSelectionFilters;
+  commitWindow?: CommitWindow;
+  autoPublish?: boolean;
+  resolveContext: ResolveIntegrationContext;
+  resolveLinearContext?: ResolveLinearIntegrationContext;
+  log?: AILogTarget;
+  telemetryMetadata?: TccMetadata;
+  includeSearchBrandReferencesTool?: boolean;
+}
+
+export interface BackgroundGenResult {
+  postId: string;
+  title: string;
+  posts: PostSummary[];
+  usage?: AgentTokenUsage;
+}
+
 export interface LinearIntegrationRef {
   integrationId: string;
   teamName?: string;
@@ -59,6 +97,7 @@ export interface LinearIntegrationRef {
 
 export interface ChangelogAgentOptions {
   organizationId: string;
+  collectionId: string;
   voiceId?: string;
   repositories: Array<{
     integrationId: string;
@@ -89,6 +128,7 @@ export interface LinkedInAgentResult {
 
 export interface LinkedInAgentOptions {
   organizationId: string;
+  collectionId: string;
   voiceId?: string;
   repositories: Array<{
     integrationId: string;
@@ -119,6 +159,7 @@ export interface TwitterAgentResult {
 
 export interface TwitterAgentOptions {
   organizationId: string;
+  collectionId: string;
   voiceId?: string;
   repositories: Array<{
     integrationId: string;
@@ -149,6 +190,7 @@ export interface BlogPostAgentResult {
 
 export interface BlogPostAgentOptions {
   organizationId: string;
+  collectionId: string;
   voiceId?: string;
   repositories: Array<{
     integrationId: string;

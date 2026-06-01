@@ -106,6 +106,8 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
 
     const {
       organizationId,
+      userId,
+      collectionId,
       runId,
       jobId,
       contentType,
@@ -374,6 +376,8 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
           try {
             return await generateScheduledContent(contentType, {
               organizationId,
+              userId,
+              collectionId,
               repositories: repositories.map((repo) => ({
                 integrationId: repo.id,
                 owner: repo.owner,
@@ -695,7 +699,24 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
 
       const autumnClient = autumn;
       const contentUsage = contentResult.usage;
-      if (aiCreditReserved && autumnClient && contentUsage) {
+      if (
+        aiCreditReserved &&
+        autumnClient &&
+        Number.isFinite(contentResult.usageCostCents)
+      ) {
+        await context.run("track-ai-credit-usage-cost", async () => {
+          await autumnClient.track({
+            customerId: organizationId,
+            featureId: FEATURES.AI_CREDITS,
+            value: contentResult.usageCostCents ?? 1,
+            properties: {
+              source: "manual",
+              output_type: contentType,
+              cost_cents: contentResult.usageCostCents,
+            },
+          });
+        });
+      } else if (aiCreditReserved && autumnClient && contentUsage) {
         await context.run("track-ai-credit-usage", async () => {
           const costCents = calculateTokenCostCents(
             contentUsage,

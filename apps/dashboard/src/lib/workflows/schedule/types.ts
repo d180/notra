@@ -14,6 +14,8 @@ import type { PostSummary } from "@/types/posts";
 
 export interface ContentGenerationContext {
   organizationId: string;
+  userId?: string;
+  collectionId: string;
   repositories: Array<{
     integrationId: string;
     owner: string;
@@ -56,6 +58,7 @@ export type ContentGenerationResult =
       title: string;
       posts: PostSummary[];
       usage?: AgentTokenUsage;
+      usageCostCents?: number;
     }
   | { status: "skipped"; reason: string }
   | { status: "rate_limited"; retryAfterSeconds?: number }

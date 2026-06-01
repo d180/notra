@@ -1,3 +1,4 @@
+import { getCalApi } from "@calcom/embed-react";
 import {
   ArrowRight01Icon,
   Calendar03Icon,
@@ -20,6 +21,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@notra/ui/components/ui/breadcrumb";
+import { Button } from "@notra/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,8 +40,8 @@ import {
   CreditBalanceButton,
   CreditBalanceMenuItem,
 } from "@/components/billing/credit-balance-button";
-import { Button } from "@/components/button";
 import { ChatTopbarTitle } from "@/components/dashboard/chat-topbar-title";
+import { ContentTopbarTitle } from "@/components/dashboard/content-topbar-title";
 import { useFeedback } from "@/components/dashboard/feedback-context";
 import {
   FeedbackForm,
@@ -49,6 +51,7 @@ import {
 const NON_ORG_PATHS: string[] = [];
 
 const SEGMENT_CONFIG: Record<string, { label?: string; href?: null }> = {
+  collection: { label: "Collections" },
   billing: { label: "Billing & Usage" },
   automation: { href: null },
   brand: { href: null },
@@ -114,7 +117,6 @@ export function SiteHeader() {
 
   useEffect(() => {
     (async () => {
-      const { getCalApi } = await import("@calcom/embed-react");
       const cal = await getCalApi({ namespace: "15min" });
       cal("ui", { hideEventTypeDetails: false, layout: "month_view" });
     })();
@@ -135,21 +137,52 @@ export function SiteHeader() {
     breadcrumbSegments[0] === "chat" &&
     breadcrumbSegments.length >= 2;
   const chatDetailId = isChatDetail ? breadcrumbSegments[1] : null;
+  const isCollectionDetail =
+    !isNonOrgPath &&
+    breadcrumbSegments[0] === "collection" &&
+    breadcrumbSegments.length >= 2;
+  const collectionDetailId = isCollectionDetail ? breadcrumbSegments[1] : null;
+  const isContentDetail =
+    !isNonOrgPath &&
+    breadcrumbSegments[0] === "content" &&
+    breadcrumbSegments.length >= 2;
+  const contentDetailId = isContentDetail ? breadcrumbSegments[1] : null;
 
-  const breadcrumbs = breadcrumbSegments.flatMap((segment, index) => {
-    const href = isNonOrgPath
-      ? `/${segments.slice(0, index + 1).join("/")}`
-      : `/${segments.slice(0, index + 2).join("/")}`;
-    const isLast = index === breadcrumbSegments.length - 1;
+  const displayBreadcrumbSegments = isCollectionDetail
+    ? ["content", "collection"]
+    : breadcrumbSegments;
+
+  const breadcrumbs = displayBreadcrumbSegments.flatMap((segment, index) => {
+    const href = (() => {
+      if (isCollectionDetail && segment === "content") {
+        return `/${slug}/content`;
+      }
+      if (isCollectionDetail && segment === "collection") {
+        return `/${slug}/content`;
+      }
+      return isNonOrgPath
+        ? `/${segments.slice(0, index + 1).join("/")}`
+        : `/${segments.slice(0, index + 2).join("/")}`;
+    })();
+    const isLast = index === displayBreadcrumbSegments.length - 1;
     const config = SEGMENT_CONFIG[segment];
     const label =
       config?.label ??
       segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ");
     const isClickable = config?.href !== null;
     const isChatDetailLast = isChatDetail && isLast && chatDetailId;
+    const isContentDetailLast = isContentDetail && isLast && contentDetailId;
     const content = (() => {
       if (isChatDetailLast) {
         return <ChatTopbarTitle chatId={chatDetailId} />;
+      }
+
+      if (isContentDetailLast) {
+        return <ContentTopbarTitle contentId={contentDetailId} />;
+      }
+
+      if (isCollectionDetail && isLast) {
+        return <BreadcrumbPage>{label}</BreadcrumbPage>;
       }
 
       if (isClickable) {
@@ -166,8 +199,10 @@ export function SiteHeader() {
     const item = (
       <BreadcrumbItem
         className={cn(
-          isChatDetailLast && "min-w-0",
-          isClickable && !isChatDetailLast && "hover:underline"
+          (isChatDetailLast || isContentDetailLast) && "min-w-0",
+          isClickable &&
+            !(isChatDetailLast || isCollectionDetail || isContentDetailLast) &&
+            "hover:underline"
         )}
         key={`${id}-item-${segment}`}
       >

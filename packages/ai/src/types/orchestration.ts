@@ -1,6 +1,11 @@
 import type { AILogTarget } from "@notra/ai/observability";
+import type {
+  ResolveIntegrationContext,
+  ResolveLinearIntegrationContext,
+} from "@notra/ai/types/agents";
+import type { PostToolsResult } from "@notra/ai/types/post-tools";
 import type { TccMetadata } from "@notra/ai/types/tcc";
-import type { streamText, UIMessage } from "ai";
+import type { LanguageModelUsage, streamText, UIMessage } from "ai";
 
 export interface ValidatedGitHubIntegration {
   id: string;
@@ -86,7 +91,12 @@ export interface RoutingResult {
 export interface ToolSet {
   tools: Record<string, import("ai").Tool>;
   descriptions: string[];
-  cleanup?: () => Promise<void>;
+}
+
+export interface ImageDefaults {
+  integrationId: string;
+  branch: string;
+  title: string;
 }
 
 export interface RepoContext {
@@ -106,6 +116,9 @@ export interface OrchestrateInput {
   messages: UIMessage[];
   currentMarkdown: string;
   contentType?: string;
+  currentPostId?: string;
+  userId?: string;
+  imageDefaults?: ImageDefaults;
   selection?: TextSelection;
   context?: ContextItem[];
   maxSteps?: number;
@@ -119,11 +132,49 @@ export interface OrchestrateResult {
   routingDecision: RoutingResult;
 }
 
+export type StreamProviderOptions = NonNullable<
+  Parameters<typeof streamText>[0]["providerOptions"]
+>;
+
+export interface OrchestrateDeps {
+  integrationFetchers?: IntegrationFetchers;
+  resolveContext?: ResolveIntegrationContext;
+  resolveLinearContext?: ResolveLinearIntegrationContext;
+  onUsage?: (
+    usage: LanguageModelUsage,
+    modelId: string
+  ) => void | Promise<void>;
+  log?: AILogTarget;
+}
+
 export interface BuildToolSetParams {
   organizationId: string;
   currentMarkdown: string;
+  contentType?: string;
+  currentPostId?: string;
+  userId?: string;
+  imageDefaults?: ImageDefaults;
   onMarkdownUpdate?: (markdown: string) => void;
   validatedIntegrations: ValidatedIntegration[];
+}
+
+export interface BuildToolSetDeps {
+  resolveContext?: ResolveIntegrationContext;
+  resolveLinearContext?: ResolveLinearIntegrationContext;
+  skipTools?: boolean;
+}
+
+export interface BuildStandaloneToolSetParams {
+  organizationId: string;
+  chatId?: string;
+  userId?: string;
+  validatedIntegrations: ValidatedIntegration[];
+  postResult: PostToolsResult;
+}
+
+export interface BuildStandaloneToolSetDeps {
+  resolveContext?: ResolveIntegrationContext;
+  resolveLinearContext?: ResolveLinearIntegrationContext;
 }
 
 export interface GitHubIntegrationData {

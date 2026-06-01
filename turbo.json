@@ -47,6 +47,7 @@
     "AXIOM_ORG_ID",
     "SKILLS_SH_API_KEY",
     "FEEDBACK_EMAIL_TO",
+    "UPSTASH_BOX_API_KEY",
     "TCC_API_KEY"
   ],
   "envMode": "strict",

@@ -1,7 +1,11 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { SentIcon, TextIcon } from "@hugeicons/core-free-icons";
+import {
+  ArrowLeft02Icon,
+  SentIcon,
+  TextIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import type { ContextItem, TextSelection } from "@notra/ai/types/chat";
 import {
@@ -10,6 +14,7 @@ import {
   AvatarImage,
 } from "@notra/ui/components/ui/avatar";
 import { Badge } from "@notra/ui/components/ui/badge";
+import { Button } from "@notra/ui/components/ui/button";
 import { useSidebar } from "@notra/ui/components/ui/sidebar";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
 import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
@@ -24,7 +29,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import remend from "remend";
 import { toast } from "sonner";
-import { Button } from "@/components/button";
 import ChatInput from "@/components/chat-input";
 import { getContentTypeLabel } from "@/components/content/content-card";
 import type { EditorRefHandle } from "@/components/content/editor/plugins/editor-ref-plugin";
@@ -35,24 +39,16 @@ import { LINKEDIN_BRAND_PRIMARY } from "@/constants/linkedin";
 import { TWITTER_BRAND_COLOR } from "@/constants/twitter";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import { sourceMetadataSchema } from "@/schemas/content";
+import type { ContentDetailPageClientProps } from "@/types/content/detail";
 import type { BrandSettings } from "@/types/hooks/brand-analysis";
 import { getBrandFaviconUrl } from "@/utils/brand";
 import { formatSnakeCaseLabel } from "@/utils/format";
-import {
-  copyLinkedInPostForPublishing,
-  createLinkedInPostUrl,
-} from "@/utils/linkedin";
+import { createLinkedInPostUrl } from "@/utils/linkedin";
 import { createTwitterPostUrl } from "@/utils/twitter";
 import { useContent } from "../../../../../lib/hooks/use-content";
 import { ContentDetailSkeleton } from "./skeleton";
 
 const TITLE_REGEX = /^#\s+(.+)$/m;
-
-interface PageClientProps {
-  contentId: string;
-  organizationSlug: string;
-  organizationId: string;
-}
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -102,7 +98,7 @@ export default function PageClient({
   contentId,
   organizationSlug,
   organizationId,
-}: PageClientProps) {
+}: ContentDetailPageClientProps) {
   const { state: sidebarState } = useSidebar();
   const queryClient = useQueryClient();
   const { data, isPending, error } = useContent(organizationId, contentId);
@@ -140,6 +136,21 @@ export default function PageClient({
       setEditorKey((k) => k + 1);
     }
   }, [data, editedMarkdown]);
+
+  useEffect(() => {
+    if (
+      data?.content?.contentType !== "image" ||
+      data.content.markdown === editedMarkdownRef.current
+    ) {
+      return;
+    }
+
+    setEditedMarkdown(data.content.markdown);
+    setOriginalMarkdown(data.content.markdown);
+    originalMarkdownRef.current = data.content.markdown;
+    editedMarkdownRef.current = data.content.markdown;
+    setEditorKey((k) => k + 1);
+  }, [data?.content]);
 
   const currentMarkdown = editedMarkdown ?? data?.content?.markdown ?? "";
   useEffect(() => {
@@ -183,10 +194,6 @@ export default function PageClient({
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [hasChanges]);
-
-  const handlePostToLinkedIn = useCallback(() => {
-    copyLinkedInPostForPublishing(currentMarkdown);
-  }, [currentMarkdown]);
 
   const handleSave = useCallback(async () => {
     if (!hasChanges) {
@@ -426,7 +433,8 @@ export default function PageClient({
     transport: new DefaultChatTransport({
       api: `/api/organizations/${organizationId}/content/${contentId}/chat`,
       body: () => ({
-        currentMarkdown: currentMarkdownRef.current,
+        currentMarkdown:
+          contentTypeRef.current === "image" ? "" : currentMarkdownRef.current,
         contentType: contentTypeRef.current,
         selection: selectionRef.current ?? undefined,
         context: contextRef.current,
@@ -472,6 +480,7 @@ export default function PageClient({
     const toolNames: Record<string, string> = {
       getMarkdown: "Reading document...",
       editMarkdown: "Editing document...",
+      reviseImage: "Revising image...",
       listAvailableSkills: "Checking skills...",
       getSkillByName: "Loading skill...",
     };
@@ -522,16 +531,37 @@ export default function PageClient({
   }, [messages, status]);
 
   const processedToolCallsRef = useRef<Set<string>>(new Set());
+  const invalidateContentQueries = useCallback(
+    () =>
+      Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: dashboardOrpc.content.get.queryKey({
+            input: { organizationId, contentId },
+          }),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: dashboardOrpc.content.list.key(),
+        }),
+      ]),
+    [contentId, organizationId, queryClient]
+  );
 
   useEffect(() => {
     for (const message of messages) {
       if (message.role === "assistant" && message.parts) {
         for (const part of message.parts) {
-          if (part.type === "tool-editMarkdown") {
+          if (
+            part.type === "tool-editMarkdown" ||
+            part.type === "tool-reviseImage"
+          ) {
             const toolPart = part as {
               toolCallId: string;
               state: string;
-              output?: { updatedMarkdown?: string };
+              output?: {
+                markdown?: string;
+                status?: string;
+                updatedMarkdown?: string;
+              };
             };
 
             if (processedToolCallsRef.current.has(toolPart.toolCallId)) {
@@ -539,23 +569,46 @@ export default function PageClient({
             }
 
             if (
+              part.type === "tool-reviseImage" &&
               toolPart.state === "output-available" &&
-              toolPart.output?.updatedMarkdown
+              toolPart.output?.status === "updated"
             ) {
               processedToolCallsRef.current.add(toolPart.toolCallId);
-              const fixedMarkdown = remend(toolPart.output.updatedMarkdown);
+              invalidateContentQueries().catch((error) => {
+                console.error("Failed to refresh revised image content", error);
+              });
+              continue;
+            }
+
+            if (
+              toolPart.state === "output-available" &&
+              (toolPart.output?.updatedMarkdown || toolPart.output?.markdown)
+            ) {
+              processedToolCallsRef.current.add(toolPart.toolCallId);
+              const nextMarkdown =
+                toolPart.output.updatedMarkdown || toolPart.output.markdown;
+              if (!nextMarkdown) {
+                continue;
+              }
+              const fixedMarkdown =
+                part.type === "tool-reviseImage"
+                  ? nextMarkdown
+                  : remend(nextMarkdown);
               console.log(
-                `[Tool] editMarkdown result applied, toolCallId=${toolPart.toolCallId}`
+                `[Tool] ${part.type} result applied, toolCallId=${toolPart.toolCallId}`
               );
               setEditedMarkdown(fixedMarkdown);
               editedMarkdownRef.current = fixedMarkdown;
               editorRef.current?.setMarkdown(fixedMarkdown);
+              invalidateContentQueries().catch((error) => {
+                console.error("Failed to refresh edited content", error);
+              });
             }
           }
         }
       }
     }
-  }, [messages]);
+  }, [invalidateContentQueries, messages]);
 
   const handleAiEdit = useCallback(
     async (instruction: string) => {
@@ -625,34 +678,24 @@ export default function PageClient({
   }
 
   const content = data.content;
+  const collection = data.collection;
+  const backHref = collection
+    ? `/${organizationSlug}/collection/${collection.id}`
+    : `/${organizationSlug}/content`;
+  const backLabel = collection ? "Back to collection" : "Back to Content";
 
   return (
     <>
       <div className="flex flex-1 flex-col gap-4 py-4 md:gap-6 md:py-6">
         <div className="mx-auto w-full max-w-5xl space-y-6 px-4 lg:px-6">
+          <Link
+            className="inline-flex w-fit items-center gap-1.5 rounded-sm text-muted-foreground text-sm transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            href={backHref}
+          >
+            <HugeiconsIcon className="size-4" icon={ArrowLeft02Icon} />
+            {backLabel}
+          </Link>
           <div className="flex flex-wrap items-center gap-4">
-            <Link
-              className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              href={`/${organizationSlug}/content`}
-            >
-              <Button size="sm" tabIndex={-1} variant="ghost">
-                <svg
-                  className="mr-2 size-4"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <title>Back arrow</title>
-                  <path d="M19 12H5" />
-                  <path d="m12 19-7-7 7-7" />
-                </svg>
-                Back to Content
-              </Button>
-            </Link>
             <div className="flex flex-1 flex-col gap-1">
               <div className="flex items-center gap-3">
                 <time
@@ -682,12 +725,25 @@ export default function PageClient({
                     return null;
                   }
                   const meta = parsed.data;
-                  const repoLabel = formatRepos(meta.repositories);
-                  const needsTooltip = meta.repositories.length > 1;
+                  const repositories = meta.repositories ?? [];
+                  if (
+                    repositories.length === 0 ||
+                    !meta.triggerSourceType ||
+                    !meta.lookbackWindow ||
+                    !meta.lookbackRange
+                  ) {
+                    return null;
+                  }
+
+                  const triggerSourceType = meta.triggerSourceType;
+                  const lookbackWindow = meta.lookbackWindow;
+                  const lookbackRange = meta.lookbackRange;
+                  const repoLabel = formatRepos(repositories);
+                  const needsTooltip = repositories.length > 1;
                   return (
                     <p className="text-muted-foreground text-xs">
                       <span className="capitalize">
-                        {formatTriggerType(meta.triggerSourceType)}
+                        {formatTriggerType(triggerSourceType)}
                       </span>
                       {" \u00B7 "}
                       {needsTooltip ? (
@@ -701,7 +757,7 @@ export default function PageClient({
                           />
                           <TooltipContent>
                             <ul>
-                              {meta.repositories.map((r) => (
+                              {repositories.map((r) => (
                                 <li key={`${r.owner}/${r.repo}`}>
                                   {r.owner}/{r.repo}
                                 </li>
@@ -714,13 +770,9 @@ export default function PageClient({
                       )}
                       {" \u00B7 "}
                       <span className="capitalize">
-                        {formatLookbackWindow(meta.lookbackWindow)}
+                        {formatLookbackWindow(lookbackWindow)}
                       </span>{" "}
-                      (
-                      {formatDateRange(
-                        meta.lookbackRange.start,
-                        meta.lookbackRange.end
-                      )}
+                      ({formatDateRange(lookbackRange.start, lookbackRange.end)}
                       )
                       {meta.brandVoiceName &&
                         (() => {
@@ -813,7 +865,6 @@ export default function PageClient({
                   render={
                     <a
                       href={createLinkedInPostUrl(currentMarkdown)}
-                      onClick={handlePostToLinkedIn}
                       rel="noopener noreferrer"
                       target="_blank"
                     >

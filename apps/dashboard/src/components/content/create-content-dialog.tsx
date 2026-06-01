@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Add01Icon,
   AlertCircleIcon,
   ArrowLeft01Icon,
   ArrowRight01Icon,
@@ -15,17 +16,17 @@ import {
   ResponsiveDialogTitle,
   ResponsiveDialogTrigger,
 } from "@notra/ui/components/shared/responsive-dialog";
+import { Button } from "@notra/ui/components/ui/button";
+import { Kbd } from "@notra/ui/components/ui/kbd";
 import { cn } from "@notra/ui/lib/utils";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useHotkey } from "@tanstack/react-hotkeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/button";
 import { StepActivity } from "@/components/content/create/step-activity";
 import { StepBrandIdentities } from "@/components/content/create/step-brand-identities";
 import { StepFormats } from "@/components/content/create/step-formats";
-import { CreateContentButton } from "@/components/content/create-content-button";
 import { AddIntegrationDialog } from "@/components/integrations/add-integration-dialog";
 import { AddRepositoryDialog } from "@/components/integrations/add-repository-dialog";
 import { DEFAULT_DATA_POINTS } from "@/constants/content-preview";
@@ -73,7 +74,7 @@ function getDefaultContentFormValues(): CreateContentFormValues {
   return {
     formats: [],
     repositoryIds: [],
-    brandVoiceId: "",
+    brandVoiceIds: [],
     lookbackWindow: "last_7_days",
     dataPoints: DEFAULT_DATA_POINTS,
   };
@@ -135,9 +136,9 @@ export function CreateContentDialog({
 
   const selectedFormats = useStore(form.store, (s) => s.values.formats);
   const selectedRepoIds = useStore(form.store, (s) => s.values.repositoryIds);
-  const selectedBrandVoiceId = useStore(
+  const selectedBrandVoiceIds = useStore(
     form.store,
-    (s) => s.values.brandVoiceId
+    (s) => s.values.brandVoiceIds
   );
   const lookbackWindow = useStore(form.store, (s) => s.values.lookbackWindow);
   const dataPoints = useStore(form.store, (s) => s.values.dataPoints);
@@ -369,10 +370,18 @@ export function CreateContentDialog({
       // that delegates to N sub-agents (one per format), with the boss
       // deciding the angle / topic each sub-agent writes about so the
       // outputs are coordinated instead of independently drafted.
+      const { collectionId } =
+        await dashboardOrpc.content.createCollection.call({
+          organizationId,
+          contentTypes: formats,
+          expectedPostCount: calls.length,
+        });
+
       const results = await Promise.allSettled(
         calls.map(({ format, voiceId }) =>
           dashboardOrpc.content.generate.call({
             organizationId,
+            collectionId,
             contentType: format,
             lookbackWindow,
             repositoryIds: githubRepoIds,
@@ -386,6 +395,12 @@ export function CreateContentDialog({
       const failures = results.filter((r) => r.status === "rejected");
       const succeeded = results.length - failures.length;
       if (succeeded === 0) {
+        await dashboardOrpc.content.collections.delete
+          .call({
+            organizationId,
+            collectionId,
+          })
+          .catch(() => null);
         const reason = failures[0];
         const message =
           reason &&
@@ -394,6 +409,13 @@ export function CreateContentDialog({
             ? reason.reason.message
             : "Failed to start any content generation";
         throw new Error(message);
+      }
+      if (succeeded < results.length) {
+        await dashboardOrpc.content.collections.updateExpectedPostCount.call({
+          organizationId,
+          collectionId,
+          expectedPostCount: succeeded,
+        });
       }
       return { succeeded, total: results.length };
     },
@@ -414,6 +436,9 @@ export function CreateContentDialog({
         queryKey: dashboardOrpc.content.activeGenerations.list.queryKey({
           input: { organizationId },
         }),
+      });
+      queryClient.invalidateQueries({
+        queryKey: dashboardOrpc.content.collections.list.key(),
       });
     },
     onError: (err) => {
@@ -512,19 +537,26 @@ export function CreateContentDialog({
     [form]
   );
 
-  const toggleAllIntegrations = useCallback(() => {
-    const allValues = integrationOptions.map((opt) => opt.value);
-    const allSelected =
-      allValues.length > 0 &&
-      allValues.every((value) =>
-        form.state.values.repositoryIds.includes(value)
-      );
-    form.setFieldValue("repositoryIds", allSelected ? [] : allValues);
-  }, [integrationOptions, form]);
+  const toggleAllRepoIds = useCallback(() => {
+    const allIds = integrationOptions.map((opt) => opt.value);
+    const current = form.state.values.repositoryIds;
+    form.setFieldValue(
+      "repositoryIds",
+      allIds.length > 0 && allIds.every((id) => current.includes(id))
+        ? []
+        : allIds
+    );
+  }, [form, integrationOptions]);
 
-  const selectVoiceId = useCallback(
+  const toggleVoiceId = useCallback(
     (id: string) => {
-      form.setFieldValue("brandVoiceId", id);
+      const current = form.state.values.brandVoiceIds;
+      form.setFieldValue(
+        "brandVoiceIds",
+        current.includes(id)
+          ? current.filter((v) => v !== id)
+          : [...current, id]
+      );
     },
     [form]
   );
@@ -741,7 +773,8 @@ export function CreateContentDialog({
   ]);
 
   submitHandlerRef.current = async (value: CreateContentFormValues) => {
-    const voiceIds = value.brandVoiceId ? [value.brandVoiceId] : [""];
+    const voiceIds =
+      value.brandVoiceIds.length > 0 ? value.brandVoiceIds : [""];
     await mutation.mutateAsync({
       formats: value.formats,
       voiceIds,
@@ -775,7 +808,7 @@ export function CreateContentDialog({
       setWaitingForWebhookSetup(false);
       setDialogOpen(true);
     },
-    [addRepoMode, waitingForWebhookSetup, setDialogOpen]
+    [addRepoMode, setDialogOpen, waitingForWebhookSetup]
   );
 
   const handleIntegrationSuccess = useCallback(() => {
@@ -788,9 +821,10 @@ export function CreateContentDialog({
     setDialogOpen(true);
   }, [setDialogOpen]);
 
-  const identityButtonLabel = selectedBrandVoiceId
-    ? "Start creating"
-    : "Skip & start creating";
+  const identityButtonLabel =
+    selectedBrandVoiceIds.length === 0
+      ? "Skip & start creating"
+      : `Start creating with ${selectedBrandVoiceIds.length} ${selectedBrandVoiceIds.length === 1 ? "identity" : "identities"}`;
 
   const stepIndex = STEP_ORDER.indexOf(step);
 
@@ -842,9 +876,10 @@ export function CreateContentDialog({
       };
     }
     return {
-      text: selectedBrandVoiceId
-        ? "1 identity selected"
-        : "No identity selected",
+      text:
+        selectedBrandVoiceIds.length === 0
+          ? "No identities selected"
+          : `${selectedBrandVoiceIds.length} ${selectedBrandVoiceIds.length === 1 ? "identity" : "identities"} selected`,
       tone: "muted",
     };
   }, [
@@ -853,7 +888,7 @@ export function CreateContentDialog({
     selectedFormats.length,
     selectedRepoIds.length,
     eventCounts,
-    selectedBrandVoiceId,
+    selectedBrandVoiceIds.length,
   ]);
 
   return (
@@ -861,7 +896,13 @@ export function CreateContentDialog({
       <ResponsiveDialog onOpenChange={handleOpenChange} open={open}>
         {!hideTrigger && (
           <ResponsiveDialogTrigger
-            render={<CreateContentButton disabled={!organizationId} />}
+            render={
+              <Button className="gap-1.5" disabled={!organizationId}>
+                <HugeiconsIcon className="size-4" icon={Add01Icon} />
+                Create Content
+                <Kbd className="ml-1 hidden sm:inline-flex">C</Kbd>
+              </Button>
+            }
           />
         )}
         <ResponsiveDialogContent className="flex h-[85vh] max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
@@ -896,7 +937,7 @@ export function CreateContentDialog({
                   onConnect={handleOpenAddRepositoryFlow}
                   onRetryPreview={handleRetryPreview}
                   onSearchQueryChange={setSearchQuery}
-                  onToggleAllIntegrations={toggleAllIntegrations}
+                  onToggleAllIntegrations={toggleAllRepoIds}
                   onToggleCommit={(key) => {
                     selectionsTouchedRef.current = true;
                     setSelectedCommitKeys((prev) => {
@@ -960,9 +1001,9 @@ export function CreateContentDialog({
               {step === "identities" && (
                 <StepBrandIdentities
                   isLoading={isLoadingVoices}
-                  onChange={selectVoiceId}
+                  onToggle={toggleVoiceId}
                   organizationId={organizationId}
-                  value={selectedBrandVoiceId}
+                  selected={selectedBrandVoiceIds}
                   voices={brandVoices}
                 />
               )}

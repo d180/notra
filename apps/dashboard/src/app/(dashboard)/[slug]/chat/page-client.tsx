@@ -1,7 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { AiBrain01Icon, ArrowDown01Icon, X } from "@hugeicons/core-free-icons";
+import { ArrowDown01Icon, X } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   chatErrorPayloadSchema,
@@ -65,11 +65,12 @@ import {
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { localStorageKeys } from "@/constants/storage";
 import { authClient } from "@/lib/auth/client";
-import { getMcpFaviconFromToolMetadata } from "@/lib/integrations/mcp";
-import { dashboardOrpc } from "@/lib/orpc/query";
 import { isImageMimeType } from "@/lib/upload/mime";
 import { cn } from "@/lib/utils";
-import { getBrandFaviconFromToolOutput } from "@/utils/brand";
+import type {
+  CreateToolContentType,
+  StandaloneChatPageClientProps,
+} from "@/types/components/chat-page";
 import {
   CHAT_PREFERENCES_STORAGE_KEY,
   DEFAULT_CHAT_PREFERENCES,
@@ -171,7 +172,7 @@ function ChatReasoningBlock({
         {isStreaming ? (
           <Loader2Icon className="size-4 animate-spin" />
         ) : (
-          <HugeiconsIcon className="size-4" icon={AiBrain01Icon} />
+          <span className="size-4" />
         )}
         <span>{statusLabel}</span>
         <HugeiconsIcon
@@ -191,11 +192,6 @@ function ChatReasoningBlock({
   );
 }
 
-interface PageClientProps {
-  organizationSlug: string;
-  chatId?: string;
-}
-
 const CREATE_TOOL_TYPES = {
   "tool-createBlogPost": "blog_post",
   "tool-createChangelog": "changelog",
@@ -210,7 +206,7 @@ function isCreateTool(type: string): boolean {
 
 function getCreateToolContentType(
   type: keyof typeof CREATE_TOOL_TYPES
-): ContentType {
+): CreateToolContentType {
   return CREATE_TOOL_TYPES[type];
 }
 
@@ -354,7 +350,7 @@ function ChatImageAttachment({
 function StandaloneChatPageClient({
   organizationSlug,
   chatId: initialChatId,
-}: PageClientProps) {
+}: StandaloneChatPageClientProps) {
   const router = useRouter();
   const [initialQuery, setInitialQuery] = useQueryState(
     "q",
@@ -702,22 +698,6 @@ function StandaloneChatPageClient({
     enabled: Boolean(initialChatId) && Boolean(organizationId),
     staleTime: 1000 * 60 * 5,
   });
-
-  const hasMcpToolCalls = useMemo(
-    () =>
-      messages.some((message) =>
-        message.parts?.some((part) => part.type === "dynamic-tool")
-      ),
-    [messages]
-  );
-
-  const mcpServersQuery = useQuery(
-    dashboardOrpc.integrations.mcp.list.queryOptions({
-      input: { organizationId },
-      enabled: Boolean(organizationId) && hasMcpToolCalls,
-    })
-  );
-  const mcpServers = mcpServersQuery.data?.servers;
 
   useLayoutEffect(() => {
     if (!chatHistoryQuery.data) {
@@ -1576,51 +1556,6 @@ function StandaloneChatPageClient({
       );
     }
 
-    if (part.type === "dynamic-tool") {
-      const toolPart = part as {
-        type: string;
-        toolName: string;
-        state: string;
-        toolCallId: string;
-        input?: unknown;
-        output?: unknown;
-        errorText?: string;
-        toolMetadata?: unknown;
-      };
-
-      if (
-        toolPart.state === "input-streaming" ||
-        toolPart.state === "input-available" ||
-        toolPart.state === "output-available" ||
-        toolPart.state === "output-error"
-      ) {
-        return (
-          <ChatToolBlock
-            iconUrl={
-              getMcpFaviconFromToolMetadata(
-                toolPart.toolMetadata,
-                mcpServers
-              ) ??
-              getBrandFaviconFromToolOutput(toolPart.toolName, toolPart.output)
-            }
-            input={toolPart.input}
-            isMcp={toolPart.toolName.startsWith("mcp_")}
-            key={toolPart.toolCallId}
-            output={
-              toolPart.state === "output-error"
-                ? { error: toolPart.errorText }
-                : toolPart.output
-            }
-            state={toolPart.state}
-            toolMetadata={toolPart.toolMetadata}
-            toolName={toolPart.toolName}
-          />
-        );
-      }
-
-      return null;
-    }
-
     if (part.type.startsWith("tool-")) {
       const toolPart = part as {
         type: string;
@@ -1629,7 +1564,6 @@ function StandaloneChatPageClient({
         input?: { title?: string; markdown?: string };
         output?: { postId?: string; status?: string };
         approval?: { id: string; approved?: boolean; reason?: string };
-        toolMetadata?: unknown;
       };
       const toolName = toolPart.type.replace("tool-", "");
 
@@ -1706,6 +1640,7 @@ function StandaloneChatPageClient({
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     ...payload,
+                    chatId: stableChatId,
                     contentType,
                     status,
                   }),
@@ -1813,12 +1748,10 @@ function StandaloneChatPageClient({
       ) {
         return (
           <ChatToolBlock
-            iconUrl={getBrandFaviconFromToolOutput(toolName, toolPart.output)}
             input={toolPart.input}
             key={toolPart.toolCallId}
             output={toolPart.output}
             state={toolPart.state}
-            toolMetadata={toolPart.toolMetadata}
             toolName={toolName}
           />
         );
@@ -1955,10 +1888,7 @@ function StandaloneChatPageClient({
   return (
     <>
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div
-          className="flex-1 overflow-y-auto overflow-x-hidden"
-          ref={scrollContainerRef}
-        >
+        <div className="flex-1 overflow-y-auto" ref={scrollContainerRef}>
           <div className="relative flex min-h-full flex-col">
             <div className="flex flex-1 flex-col px-4 pt-6 pb-28">
               <div
@@ -2137,7 +2067,7 @@ function StandaloneChatPageClient({
   );
 }
 
-export default function PageClient(props: PageClientProps) {
+export default function PageClient(props: StandaloneChatPageClientProps) {
   return (
     <StandaloneChatPageClient
       chatId={props.chatId}

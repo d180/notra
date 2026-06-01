@@ -1,16 +1,14 @@
-import { hasEnabledMcpServerIntegrations } from "@notra/ai/integrations/mcp";
 import { createModel } from "@notra/ai/model";
 import { getStandaloneChatPrompt } from "@notra/ai/prompts/standalone-chat";
-import { withGatewayAutomaticCaching } from "@notra/ai/provider-options";
 import {
   createCreatePostTool,
   createUpdatePostTool,
   createViewPostTool,
 } from "@notra/ai/tools/post";
-import { hasSupermemoryToolsConfigured } from "@notra/ai/tools/supermemory";
 import type {
   AutoThinkingLevel,
   IntegrationFetchers,
+  StreamProviderOptions,
   ValidatedIntegration,
 } from "@notra/ai/types/orchestration";
 import type { PostToolsResult } from "@notra/ai/types/post-tools";
@@ -44,7 +42,7 @@ const SKILLS_MENTION_REGEX = /\bskills?\b/i;
 
 const TRIVIAL_HISTORY_LIMIT = 6;
 const MINIMAL_STANDALONE_PROMPT =
-  "You are Notra, an AI assistant for content teams. Reply briefly and warmly.";
+  "You are Notra, an AI assistant for content teams. Reply briefly and warmly. Do not call tools on this turn.";
 
 export async function orchestrateStandaloneChat(
   input: StandaloneChatInput,
@@ -52,6 +50,8 @@ export async function orchestrateStandaloneChat(
 ): Promise<OrchestrateResult> {
   const {
     organizationId,
+    chatId,
+    userId,
     messages,
     context = [],
     maxSteps = 5,
@@ -86,10 +86,6 @@ export async function orchestrateStandaloneChat(
     !hasNonTextPartsOnLatestTurn && isTrivialMessage(lastUserMessage);
   const mentionsSkills = SKILLS_MENTION_REGEX.test(lastUserMessage);
   const isAuto = requestedModel === undefined || requestedModel === "auto";
-  const hasMcp =
-    isAuto && !(hasGitHub || hasLinear)
-      ? await hasEnabledMcpServerIntegrations(organizationId)
-      : false;
 
   let selectedModel: string;
   let autoThinkingLevel: AutoThinkingLevel | undefined;
@@ -102,7 +98,7 @@ export async function orchestrateStandaloneChat(
   if (isAuto) {
     const decision = await routeMessage(
       lastUserMessage,
-      hasGitHub || hasLinear || hasMcp,
+      hasGitHub || hasLinear,
       log,
       hasNonTextPartsOnLatestTurn,
       telemetryMetadata
@@ -135,23 +131,23 @@ export async function orchestrateStandaloneChat(
 
   const isSimpleNoTools =
     routingDecision.complexity === "simple" && !routingDecision.requiresTools;
-  const useExplicitMemoryTools =
-    !isSimpleNoTools && hasSupermemoryToolsConfigured();
 
-  const model = createModel(
+  const modelWithMemory = createModel(
     organizationId,
     routingDecision.model,
-    { disableMemory: isSimpleNoTools || useExplicitMemoryTools },
+    { disableMemory: isSimpleNoTools },
     log
   );
 
   const postResult: PostToolsResult = {};
 
-  const { tools, descriptions, cleanup } = isSimpleNoTools
+  const { tools, descriptions } = isSimpleNoTools
     ? { tools: {}, descriptions: [] as string[] }
-    : await buildStandaloneToolSet(
+    : buildStandaloneToolSet(
         {
           organizationId,
+          chatId,
+          userId,
           validatedIntegrations,
           postResult,
         },
@@ -161,116 +157,80 @@ export async function orchestrateStandaloneChat(
         }
       );
 
-  try {
-    const repoContext = getRepoContextFromIntegrations(validatedIntegrations);
-    const linearContext = getLinearContextFromIntegrations(
-      validatedIntegrations
-    );
+  const repoContext = getRepoContextFromIntegrations(validatedIntegrations);
+  const linearContext = getLinearContextFromIntegrations(validatedIntegrations);
 
-    const systemPrompt = isSimpleNoTools
-      ? MINIMAL_STANDALONE_PROMPT
-      : getStandaloneChatPrompt({
-          repoContext,
-          linearContext,
-          toolDescriptions: descriptions,
-          hasGitHubEnabled: hasGitHub,
-          hasLinearEnabled: hasLinear,
-          timezone,
-        });
-
-    const effectiveThinkingLevel = autoThinkingLevel ?? thinkingLevel;
-    const effectiveEnableThinking =
-      enableThinking &&
-      (autoThinkingLevel ? autoThinkingLevel !== "off" : true);
-
-    const providerOptions = isSimpleNoTools
-      ? undefined
-      : getThinkingProviderOptions(
-          routingDecision.model,
-          effectiveEnableThinking,
-          effectiveThinkingLevel
-        );
-
-    const messagesForModel = await expandTextFileParts(
-      stripIncompleteToolParts(
-        isSimpleNoTools ? trimTrivialHistory(messages) : messages
-      )
-    );
-
-    const modelMessages = await convertToModelMessages(messagesForModel, {
-      ignoreIncompleteToolCalls: true,
-    });
-
-    let firstChunkFired = false;
-    const stream = streamText({
-      model,
-      system: systemPrompt,
-      messages: modelMessages,
-      tools,
-      stopWhen: stepCountIs(isSimpleNoTools ? 1 : maxSteps),
-      experimental_transform: smoothStream(),
-      providerOptions: withGatewayAutomaticCaching(providerOptions),
-      abortSignal,
-      experimental_telemetry: buildExperimentalTelemetry(telemetryMetadata),
-      onChunk({ chunk }) {
-        if (firstChunkFired) {
-          return;
-        }
-        if (chunk.type === "text-delta" || chunk.type === "reasoning-delta") {
-          firstChunkFired = true;
-          deps?.onFirstChunk?.();
-        }
-      },
-      onAbort({ steps }) {
-        cleanup?.().catch((error) => {
-          console.error("[Standalone Chat MCP Cleanup Error]", {
-            organizationId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        });
-        console.log("[Standalone Chat Stream Aborted]", {
-          organizationId,
-          model: routingDecision.model,
-          completedSteps: steps.length,
-        });
-      },
-      async onFinish({ totalUsage }) {
-        await cleanup?.();
-        await deps?.onUsage?.(totalUsage, routingDecision.model);
-      },
-      onError({ error }) {
-        cleanup?.().catch((cleanupError) => {
-          console.error("[Standalone Chat MCP Cleanup Error]", {
-            organizationId,
-            error:
-              cleanupError instanceof Error
-                ? cleanupError.message
-                : String(cleanupError),
-          });
-        });
-        console.error("[Standalone Chat Stream Error]", {
-          organizationId,
-          model: routingDecision.model,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      },
-    });
-
-    return { stream, routingDecision };
-  } catch (error) {
-    try {
-      await cleanup?.();
-    } catch (cleanupError) {
-      console.error("[Standalone Chat MCP Cleanup Error]", {
-        organizationId,
-        error:
-          cleanupError instanceof Error
-            ? cleanupError.message
-            : String(cleanupError),
+  const systemPrompt = isSimpleNoTools
+    ? MINIMAL_STANDALONE_PROMPT
+    : getStandaloneChatPrompt({
+        repoContext,
+        linearContext,
+        toolDescriptions: descriptions,
+        hasGitHubEnabled: hasGitHub,
+        hasLinearEnabled: hasLinear,
+        timezone,
       });
-    }
-    throw error;
-  }
+
+  const effectiveThinkingLevel = autoThinkingLevel ?? thinkingLevel;
+  const effectiveEnableThinking =
+    enableThinking && (autoThinkingLevel ? autoThinkingLevel !== "off" : true);
+
+  const providerOptions = isSimpleNoTools
+    ? undefined
+    : getThinkingProviderOptions(
+        routingDecision.model,
+        effectiveEnableThinking,
+        effectiveThinkingLevel
+      );
+
+  const messagesForModel = stripIncompleteToolParts(
+    isSimpleNoTools ? trimTrivialHistory(messages) : messages
+  );
+
+  const modelMessages = await convertToModelMessages(messagesForModel, {
+    ignoreIncompleteToolCalls: true,
+  });
+
+  let firstChunkFired = false;
+  const stream = streamText({
+    model: modelWithMemory,
+    system: systemPrompt,
+    messages: modelMessages,
+    tools,
+    stopWhen: stepCountIs(isSimpleNoTools ? 1 : maxSteps),
+    experimental_transform: smoothStream(),
+    providerOptions,
+    abortSignal,
+    experimental_telemetry: buildExperimentalTelemetry(telemetryMetadata),
+    onChunk({ chunk }) {
+      if (firstChunkFired) {
+        return;
+      }
+      if (chunk.type === "text-delta" || chunk.type === "reasoning-delta") {
+        firstChunkFired = true;
+        deps?.onFirstChunk?.();
+      }
+    },
+    onAbort({ steps }) {
+      console.log("[Standalone Chat Stream Aborted]", {
+        organizationId,
+        model: routingDecision.model,
+        completedSteps: steps.length,
+      });
+    },
+    async onFinish({ totalUsage }) {
+      await deps?.onUsage?.(totalUsage, routingDecision.model);
+    },
+    onError({ error }) {
+      console.error("[Standalone Chat Stream Error]", {
+        organizationId,
+        model: routingDecision.model,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    },
+  });
+
+  return { stream, routingDecision };
 }
 
 function lastUserMessageHasNonTextParts(messages: UIMessage[]): boolean {
@@ -310,7 +270,7 @@ function getLastUserMessage(messages: UIMessage[]): string {
 // survive history trimming before `convertToModelMessages` runs. Missing
 // `approval-responded` here previously dropped the user's approval payload,
 // leaving the conversation ending on an assistant turn — which Bedrock-routed
-// Anthropic (Sonnet 4.6 / Opus 4.8 via AI Gateway) rejects with
+// Anthropic (Sonnet 4.6 / Opus 4.7 via AI Gateway) rejects with
 // "This model does not support assistant message prefill".
 const TERMINAL_TOOL_STATES = new Set([
   "output-available",
@@ -371,100 +331,6 @@ function trimTrivialHistory(messages: UIMessage[]): UIMessage[] {
   });
 }
 
-const MODEL_READABLE_TEXT_MIME_TYPES = new Set(["text/plain", "text/markdown"]);
-
-async function expandTextFileParts(
-  messages: UIMessage[]
-): Promise<UIMessage[]> {
-  return Promise.all(
-    messages.map(async (message) => {
-      if (!Array.isArray(message.parts)) {
-        return message;
-      }
-
-      let changed = false;
-      const parts = await Promise.all(
-        message.parts.map(async (part) => {
-          if (
-            part.type !== "file" ||
-            !MODEL_READABLE_TEXT_MIME_TYPES.has(part.mediaType)
-          ) {
-            return part;
-          }
-
-          const text = await fetchTextAttachment(part.url);
-          if (text === null) {
-            return part;
-          }
-
-          changed = true;
-          const filename =
-            typeof part.filename === "string" && part.filename.trim().length > 0
-              ? part.filename.trim()
-              : "attached text file";
-
-          return {
-            type: "text" as const,
-            text: `\n\nAttached file (${filename}, ${part.mediaType}):\n\n${text}`,
-          };
-        })
-      );
-
-      return changed ? { ...message, parts } : message;
-    })
-  );
-}
-
-async function fetchTextAttachment(url: string): Promise<string | null> {
-  if (!isAllowedTextAttachmentUrl(url)) {
-    console.error("[Standalone Chat] Refusing to fetch text attachment URL", {
-      url,
-    });
-    return null;
-  }
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error("[Standalone Chat] Failed to fetch text attachment", {
-        status: response.status,
-        url,
-      });
-      return null;
-    }
-    return await response.text();
-  } catch (error) {
-    console.error("[Standalone Chat] Failed to read text attachment", {
-      error: error instanceof Error ? error.message : String(error),
-      url,
-    });
-    return null;
-  }
-}
-
-function isAllowedTextAttachmentUrl(url: string): boolean {
-  const publicUrl = process.env.CLOUDFLARE_PUBLIC_URL;
-  if (!publicUrl) {
-    return false;
-  }
-
-  try {
-    const attachmentUrl = new URL(url);
-    const allowedUrl = new URL(publicUrl);
-    return (
-      attachmentUrl.protocol === allowedUrl.protocol &&
-      attachmentUrl.hostname === allowedUrl.hostname &&
-      attachmentUrl.pathname.startsWith("/organization/")
-    );
-  } catch {
-    return false;
-  }
-}
-
-type StreamProviderOptions = NonNullable<
-  Parameters<typeof streamText>[0]["providerOptions"]
->;
-
 function getThinkingProviderOptions(
   modelId: string,
   enableThinking: boolean,
@@ -506,7 +372,7 @@ function getThinkingProviderOptions(
 }
 
 function usesAdaptiveThinking(modelId: string): boolean {
-  return modelId === "anthropic/claude-opus-4.8";
+  return modelId === "anthropic/claude-opus-4.7";
 }
 
 function getAnthropicThinkingBudget(

@@ -6,12 +6,12 @@ import {
   createGetPullRequestsTool,
   createGetReleaseByTagTool,
 } from "@notra/ai/tools/github";
+import { createImageTool } from "@notra/ai/tools/image";
 import {
   createGetLinearCyclesTool,
   createGetLinearIssuesTool,
   createGetLinearProjectsTool,
 } from "@notra/ai/tools/linear";
-import { createMcpRuntimeToolSet } from "@notra/ai/tools/mcp";
 import {
   createGetAvailableIntegrationsTool,
   createGetBrandIdentityTool,
@@ -26,55 +26,38 @@ import {
   getCreatePostToolName,
 } from "@notra/ai/tools/post";
 import { getSkillByName, listAvailableSkills } from "@notra/ai/tools/skills";
-import { createSupermemoryToolSet } from "@notra/ai/tools/supermemory";
-import {
-  createWebSearchTool,
-  isWebSearchAvailable,
-  WEB_SEARCH_TOOL_DESCRIPTION,
-  WEB_SEARCH_TOOL_NAME,
-} from "@notra/ai/tools/web-search";
 import type {
-  ResolveIntegrationContext,
-  ResolveLinearIntegrationContext,
-} from "@notra/ai/types/agents";
-import type {
+  BuildStandaloneToolSetDeps,
+  BuildStandaloneToolSetParams,
   LinearContext,
   RepoContext,
   ToolSet,
   ValidatedIntegration,
 } from "@notra/ai/types/orchestration";
-import type {
-  PostToolsConfig,
-  PostToolsResult,
-} from "@notra/ai/types/post-tools";
 import type { Tool } from "ai";
 
-interface BuildStandaloneToolSetParams {
-  organizationId: string;
-  validatedIntegrations: ValidatedIntegration[];
-  postResult: PostToolsResult;
-}
-
-interface BuildStandaloneToolSetDeps {
-  resolveContext?: ResolveIntegrationContext;
-  resolveLinearContext?: ResolveLinearIntegrationContext;
-}
-
-export async function buildStandaloneToolSet(
+export function buildStandaloneToolSet(
   params: BuildStandaloneToolSetParams,
   deps?: BuildStandaloneToolSetDeps
-): Promise<ToolSet> {
-  const { organizationId, validatedIntegrations, postResult } = params;
-  const hasWebSearch = isWebSearchAvailable();
+): ToolSet {
+  const { chatId, organizationId, userId, validatedIntegrations, postResult } =
+    params;
 
   const tools: Record<string, Tool> = {};
   const descriptions: string[] = [];
 
   for (const contentType of contentTypeSchema.options) {
+    if (contentType === "image") {
+      continue;
+    }
     tools[getCreatePostToolName(contentType)] = createCreatePostTool(
       { organizationId, contentType, needsApproval: true },
       postResult
     );
+  }
+
+  if (userId) {
+    tools.createImage = createImageTool({ chatId, organizationId, userId });
   }
 
   tools.updatePost = createUpdatePostTool(
@@ -96,29 +79,21 @@ export async function buildStandaloneToolSet(
   tools.getAvailableBrandReferences = createGetAvailableBrandReferencesTool({
     organizationId,
   });
-  if (hasWebSearch) {
-    tools[WEB_SEARCH_TOOL_NAME] = createWebSearchTool();
-  }
 
   descriptions.push(
-    "**Content Creation**: Create posts using createChangelog, createBlogPost, createTwitterPost, createLinkedInPost, createInvestorUpdate, plus updatePost and viewPost"
+    userId
+      ? "**Content Creation**: Create posts using createChangelog, createBlogPost, createTwitterPost, createLinkedInPost, createInvestorUpdate, createImage, plus updatePost and viewPost. createImage runs in a sandbox, saves the generated image as a draft, and stores a sandbox snapshot for future revisions."
+      : "**Content Creation**: Create posts using createChangelog, createBlogPost, createTwitterPost, createLinkedInPost, createInvestorUpdate, plus updatePost and viewPost"
   );
   descriptions.push(
     "**Organization Data**: Inspect brand identities, brand references, available integrations, and existing posts using listBrandIdentities, getBrandIdentity, getAvailableBrandReferences, getAvailableIntegrations, getAvailablePosts, and getPostById"
   );
-  if (hasWebSearch) {
-    descriptions.push(WEB_SEARCH_TOOL_DESCRIPTION);
-  }
 
   tools.listAvailableSkills = listAvailableSkills({ organizationId });
   tools.getSkillByName = getSkillByName({ organizationId });
   descriptions.push(
     "**Skills**: Access knowledge and writing guidelines using listAvailableSkills and getSkillByName"
   );
-
-  const memoryToolSet = createSupermemoryToolSet(organizationId);
-  Object.assign(tools, memoryToolSet.tools);
-  descriptions.push(...memoryToolSet.descriptions);
 
   if (process.env.NODE_ENV === "development") {
     tools.example = exampleTool();
@@ -189,11 +164,7 @@ export async function buildStandaloneToolSet(
     );
   }
 
-  const mcpToolSet = await createMcpRuntimeToolSet(organizationId);
-  Object.assign(tools, mcpToolSet.tools);
-  descriptions.push(...mcpToolSet.descriptions);
-
-  return { tools, descriptions, cleanup: mcpToolSet.cleanup };
+  return { tools, descriptions };
 }
 
 function getGitHubRepoList(integrations: ValidatedIntegration[]): string {

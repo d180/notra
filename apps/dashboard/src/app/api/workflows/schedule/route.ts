@@ -19,7 +19,9 @@ import {
   members,
   organizationNotificationSettings,
   organizations,
+  postCollections,
 } from "@notra/db/schema";
+import { buildPostCollectionName } from "@notra/db/utils/post-collections";
 import { getResend } from "@notra/email/utils/resend";
 import type { WorkflowContext } from "@upstash/workflow";
 import { WorkflowAbort } from "@upstash/workflow";
@@ -64,19 +66,22 @@ import {
 import type {
   ScheduleBrandSettingsData as BrandSettingsData,
   ScheduleRepositoryData as RepositoryData,
+  ScheduleTriggerData,
 } from "@/types/workflows/workflows";
 
-interface TriggerData {
-  id: string;
-  name: string;
+async function deleteEmptyPostCollection(params: {
+  collectionId: string;
   organizationId: string;
-  sourceType: string;
-  sourceConfig: unknown;
-  targets: { repositoryIds: string[] };
-  outputType: string;
-  outputConfig: unknown;
-  enabled: boolean;
-  autoPublish: boolean;
+}) {
+  await db
+    .delete(postCollections)
+    .where(
+      and(
+        eq(postCollections.id, params.collectionId),
+        eq(postCollections.organizationId, params.organizationId),
+        eq(postCollections.completedPostCount, 0)
+      )
+    );
 }
 
 export const { POST } = serve<ScheduleWorkflowPayload>(
@@ -93,7 +98,7 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
     const creationMode = manual ? "manual" : "automatic";
 
     // Step 1: Fetch trigger configuration
-    const trigger = await context.run<TriggerData | null>(
+    const trigger = await context.run<ScheduleTriggerData | null>(
       "fetch-trigger",
       async () => {
         const result = await db.query.contentTriggers.findFirst({
@@ -295,18 +300,68 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
       generateRunId(triggerId)
     );
 
-    await context.run("track-generation-start", async () => {
-      await addActiveGeneration(trigger.organizationId, {
-        runId,
-        triggerId: trigger.id,
-        outputType: trigger.outputType,
-        triggerName: trigger.name.trim() || trigger.outputType,
-        startedAt: new Date().toISOString(),
-      });
-    });
+    const collectionId = `group_${runId}`;
 
-    // Step 3: Generate content based on output type
     try {
+      await context.run("track-generation-start", async () => {
+        await addActiveGeneration(trigger.organizationId, {
+          runId,
+          triggerId: trigger.id,
+          outputType: trigger.outputType,
+          triggerName: trigger.name.trim() || trigger.outputType,
+          startedAt: new Date().toISOString(),
+        });
+      });
+
+      await context.run("create-post-collection", async () => {
+        const now = new Date();
+
+        await db.insert(postCollections).values({
+          id: collectionId,
+          organizationId: trigger.organizationId,
+          source: trigger.sourceType === "cron" ? "schedule" : "automation",
+          sourceId: runId,
+          name: buildPostCollectionName([trigger.outputType], now),
+          nameSource: "generated",
+          contentTypes: [trigger.outputType],
+          sourceMetadata: {
+            triggerId: trigger.id,
+            triggerName: trigger.name,
+            triggerSourceType: trigger.sourceType,
+            manualRun: manual,
+          },
+          expectedPostCount: 1,
+          completedPostCount: 0,
+          createdAt: now,
+          updatedAt: now,
+        });
+      });
+
+      const generationUserId = await context.run<string | undefined>(
+        "fetch-generation-user-id",
+        async () => {
+          const ownerMembership = await db.query.members.findFirst({
+            where: and(
+              eq(members.organizationId, trigger.organizationId),
+              eq(members.role, "owner")
+            ),
+            columns: { userId: true },
+          });
+
+          if (ownerMembership?.userId) {
+            return ownerMembership.userId;
+          }
+
+          const membership = await db.query.members.findFirst({
+            where: eq(members.organizationId, trigger.organizationId),
+            columns: { userId: true },
+          });
+
+          return membership?.userId;
+        }
+      );
+
+      // Step 3: Generate content based on output type
       const contentResult = await context.run<ContentGenerationResult>(
         "generate-content",
         async () => {
@@ -396,6 +451,8 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           try {
             return await generateScheduledContent(trigger.outputType, {
               organizationId: trigger.organizationId,
+              userId: generationUserId,
+              collectionId,
               repositories: repositoryParams,
               linearIntegrations: linearIntegrationRefs,
               tone,
@@ -487,6 +544,13 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           }
         );
 
+        await context.run("cleanup-post-collection-rate-limit", async () => {
+          await deleteEmptyPostCollection({
+            collectionId,
+            organizationId: trigger.organizationId,
+          });
+        });
+
         await context.cancel();
         return;
       }
@@ -540,6 +604,16 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
 
         console.warn(
           `[Schedule] Output type ${contentResult.outputType} is not implemented for trigger ${triggerId}. Canceling without retry.`
+        );
+
+        await context.run(
+          "cleanup-post-collection-unsupported-output-type",
+          async () => {
+            await deleteEmptyPostCollection({
+              collectionId,
+              organizationId: trigger.organizationId,
+            });
+          }
         );
 
         await context.cancel();
@@ -710,6 +784,16 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           });
         }
 
+        await context.run(
+          "cleanup-post-collection-generation-failure",
+          async () => {
+            await deleteEmptyPostCollection({
+              collectionId,
+              organizationId: trigger.organizationId,
+            });
+          }
+        );
+
         await context.cancel();
         return;
       }
@@ -875,6 +959,16 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           });
         }
 
+        await context.run(
+          "cleanup-post-collection-generation-skip",
+          async () => {
+            await deleteEmptyPostCollection({
+              collectionId,
+              organizationId: trigger.organizationId,
+            });
+          }
+        );
+
         await context.cancel();
         return;
       }
@@ -885,6 +979,12 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
         console.warn("[Schedule] Content generation returned no posts", {
           triggerId,
           organizationId: trigger.organizationId,
+        });
+        await context.run("cleanup-post-collection-empty-result", async () => {
+          await deleteEmptyPostCollection({
+            collectionId,
+            organizationId: trigger.organizationId,
+          });
         });
         await context.cancel();
         return;
@@ -897,6 +997,15 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           triggerId,
           organizationId: trigger.organizationId,
         });
+        await context.run(
+          "cleanup-post-collection-missing-primary-post",
+          async () => {
+            await deleteEmptyPostCollection({
+              collectionId,
+              organizationId: trigger.organizationId,
+            });
+          }
+        );
         await context.cancel();
         return;
       }
@@ -1061,7 +1170,29 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
 
       const autumnClientSuccess = autumn;
       const contentUsage = contentResult.usage;
-      if (aiCreditReservation.reserved && autumnClientSuccess && contentUsage) {
+      if (
+        aiCreditReservation.reserved &&
+        autumnClientSuccess &&
+        Number.isFinite(contentResult.usageCostCents)
+      ) {
+        await context.run("track-ai-credit-usage-cost", async () => {
+          await autumnClientSuccess.track({
+            customerId: trigger.organizationId,
+            featureId: FEATURES.AI_CREDITS,
+            value: contentResult.usageCostCents ?? 1,
+            properties: {
+              source: "workflow_schedule",
+              output_type: trigger.outputType,
+              trigger_name: trigger.name,
+              cost_cents: contentResult.usageCostCents,
+            },
+          });
+        });
+      } else if (
+        aiCreditReservation.reserved &&
+        autumnClientSuccess &&
+        contentUsage
+      ) {
         await context.run("track-ai-credit-usage", async () => {
           const costCents = calculateTokenCostCents(
             contentUsage,
@@ -1156,6 +1287,13 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           }
         });
       }
+
+      await context.run("cleanup-post-collection-workflow-error", async () => {
+        await deleteEmptyPostCollection({
+          collectionId,
+          organizationId: trigger.organizationId,
+        });
+      });
 
       throw error;
     }

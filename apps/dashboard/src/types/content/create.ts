@@ -7,7 +7,6 @@ import type {
   PreviewResponse,
   RepositoryPreview,
 } from "@/types/content/preview";
-import type { BrandSettings } from "@/types/hooks/brand-analysis";
 
 export type WizardStep = "formats" | "activity" | "identities";
 
@@ -16,7 +15,7 @@ export interface WizardFormValues {
   lookbackWindow: LookbackWindow;
   dataPoints: ContentDataPointSettings;
   repositoryIds: string[];
-  brandVoiceId: string;
+  brandVoiceIds: string[];
 }
 
 export interface IntegrationOption {
@@ -65,9 +64,9 @@ export interface ActivityStepProps {
 }
 
 export interface BrandIdentitiesStepProps {
-  voices: BrandSettings[];
-  value: string;
-  onChange: (id: string) => void;
+  voices: Array<{ id: string; name: string; isDefault: boolean }>;
+  selected: string[];
+  onToggle: (id: string) => void;
   isLoading: boolean;
   organizationId: string;
 }

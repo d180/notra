@@ -3,39 +3,31 @@ import { members } from "@notra/db/schema";
 import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import { retryTransientDbError } from "@/lib/db/retry";
 import { organizationIdSchema } from "@/schemas/auth/organization";
-import type { OrganizationAuth } from "@/types/auth/organization";
+import type {
+  AuthenticatedUser,
+  AuthSession,
+  OrganizationAuth,
+  OrganizationAuthDependencies,
+} from "@/types/auth/organization";
 import { getServerSession } from "./session";
-
-type AuthSession = Awaited<ReturnType<typeof getServerSession>>;
-type AuthenticatedUser = NonNullable<AuthSession["user"]>;
-interface OrganizationMembership {
-  id: string;
-  role: string;
-}
-
-interface OrganizationAuthDependencies {
-  getServerSession: typeof getServerSession;
-  findMembership: (params: {
-    organizationId: string;
-    userId: string;
-  }) => Promise<OrganizationMembership | undefined>;
-  hasDatabaseUrl: () => boolean;
-}
 
 const organizationAuthDependencies: OrganizationAuthDependencies = {
   getServerSession,
   findMembership: async ({ organizationId, userId }) =>
-    db.query.members.findFirst({
-      where: and(
-        eq(members.userId, userId),
-        eq(members.organizationId, organizationId)
-      ),
-      columns: {
-        id: true,
-        role: true,
-      },
-    }),
+    retryTransientDbError(() =>
+      db.query.members.findFirst({
+        where: and(
+          eq(members.userId, userId),
+          eq(members.organizationId, organizationId)
+        ),
+        columns: {
+          id: true,
+          role: true,
+        },
+      })
+    ),
   hasDatabaseUrl: () => Boolean(process.env.DATABASE_URL),
 };
 

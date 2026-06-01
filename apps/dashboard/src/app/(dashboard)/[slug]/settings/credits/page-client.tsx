@@ -58,6 +58,7 @@ import {
   usageBarColor,
 } from "@/utils/format";
 import { getOutputTypeLabel } from "@/utils/output-types";
+import { hasMorePaginatedResults } from "@/utils/pagination";
 
 const chartConfig = {
   ai_credits: {
@@ -160,15 +161,17 @@ export default function CreditsPageClient() {
       eventsOffset,
       eventsLimit,
     ],
-    queryFn: () =>
-      autumnClient.listEvents({
+    queryFn: () => {
+      const params = {
         featureId: FEATURES.AI_CREDITS,
         offset: eventsOffset,
         limit: eventsLimit,
-      }),
+      };
+      return autumnClient.listEvents(params);
+    },
   });
 
-  const hasMore = eventsData?.hasMore ?? false;
+  const hasMore = hasMorePaginatedResults(eventsData, eventsLimit);
   const hasPrevious = page > 1;
 
   const visibleEvents = useMemo(

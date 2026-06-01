@@ -1,10 +1,6 @@
 import type { OnDemandContentType } from "@/schemas/content";
-
-interface FormatCardMeta {
-  label: string;
-  description: string;
-  iconClass: string;
-}
+import type { ScheduleOutputType } from "@/schemas/integrations";
+import type { FormatCardMeta } from "@/types/content/formats";
 
 export const FORMAT_CARD_META: Record<OnDemandContentType, FormatCardMeta> = {
   changelog: {
@@ -27,11 +23,21 @@ export const FORMAT_CARD_META: Record<OnDemandContentType, FormatCardMeta> = {
     description: "A short, punchy announcement for X / Twitter.",
     iconClass: "text-foreground",
   },
+  image: {
+    label: "Image",
+    description: "A brand-matched social image generated from repo activity.",
+    iconClass: "text-fuchsia-400",
+  },
 };
 
-export const FORMAT_ORDER: OnDemandContentType[] = [
+export const FORMAT_ORDER: ScheduleOutputType[] = [
   "changelog",
   "blog_post",
   "linkedin_post",
   "twitter_post",
+  "image",
+];
+
+export const CREATE_CONTENT_FORMAT_ORDER: OnDemandContentType[] = [
+  ...FORMAT_ORDER,
 ];

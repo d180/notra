@@ -18,6 +18,7 @@ import {
   ResponsiveAlertDialogTitle,
 } from "@notra/ui/components/shared/responsive-alert-dialog";
 import { Badge } from "@notra/ui/components/ui/badge";
+import { Button } from "@notra/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,10 +30,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { memo, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/button";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import { cn } from "@/lib/utils";
-import type { PostStatus } from "@/schemas/content";
+import type { ContentCardProps, ContentCardType } from "@/types/content/card";
 import { formatSnakeCaseLabel } from "@/utils/format";
 import { OutputTypeIcon } from "@/utils/output-types";
 
@@ -42,27 +42,15 @@ const CONTENT_TYPES = [
   "twitter_post",
   "linkedin_post",
   "investor_update",
-] as const;
+  "image",
+] as const satisfies readonly ContentCardType[];
 
-type ContentType = (typeof CONTENT_TYPES)[number];
-
-function getContentTypeLabel(contentType: ContentType): string {
+function getContentTypeLabel(contentType: string): string {
   if (contentType === "twitter_post") {
     return "tweet";
   }
 
   return formatSnakeCaseLabel(contentType);
-}
-
-interface ContentCardProps {
-  id: string;
-  title: string;
-  preview: string;
-  contentType: ContentType;
-  status: PostStatus;
-  organizationId: string;
-  className?: string;
-  href?: string;
 }
 
 const ContentCard = memo(function ContentCard({
@@ -89,9 +77,17 @@ const ContentCard = memo(function ContentCard({
       });
 
       toast.success("Post deleted");
-      await queryClient.invalidateQueries({
-        queryKey: dashboardOrpc.content.list.key(),
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: dashboardOrpc.content.list.key(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: dashboardOrpc.content.collections.list.key(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: dashboardOrpc.content.collections.get.key(),
+        }),
+      ]);
       setShowDeleteDialog(false);
     } catch {
       toast.error("Failed to delete post");
@@ -116,6 +112,12 @@ const ContentCard = memo(function ContentCard({
       await Promise.all([
         queryClient.invalidateQueries({
           queryKey: dashboardOrpc.content.list.key(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: dashboardOrpc.content.collections.list.key(),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: dashboardOrpc.content.collections.get.key(),
         }),
         queryClient.invalidateQueries({
           queryKey: dashboardOrpc.content.metrics.get.queryKey({
@@ -258,4 +260,4 @@ const ContentCard = memo(function ContentCard({
 });
 
 export { ContentCard, CONTENT_TYPES, getContentTypeLabel };
-export type { ContentCardProps, ContentType };
+export type { ContentCardProps, ContentCardType } from "@/types/content/card";
