@@ -46,6 +46,7 @@ import type { ContentDetailPageClientProps } from "@/types/content/detail";
 import type { BrandSettings } from "@/types/hooks/brand-analysis";
 import { getBrandFaviconUrl } from "@/utils/brand";
 import { formatSnakeCaseLabel } from "@/utils/format";
+import { getImageExportHtml } from "@/utils/image-content";
 import { createLinkedInPostUrl } from "@/utils/linkedin";
 import { createTwitterPostUrl } from "@/utils/twitter";
 import { useContent } from "../../../../../lib/hooks/use-content";
@@ -132,10 +133,11 @@ export default function PageClient({
 
   useEffect(() => {
     if (data?.content && editedMarkdown === null) {
-      setEditedMarkdown(data.content.markdown);
-      setOriginalMarkdown(data.content.markdown);
-      originalMarkdownRef.current = data.content.markdown;
-      editedMarkdownRef.current = data.content.markdown;
+      const nextMarkdown = data.content.markdown ?? "";
+      setEditedMarkdown(nextMarkdown);
+      setOriginalMarkdown(nextMarkdown);
+      originalMarkdownRef.current = nextMarkdown;
+      editedMarkdownRef.current = nextMarkdown;
       needsNormalizationRef.current = true;
       setEditorKey((k) => k + 1);
     }
@@ -144,15 +146,16 @@ export default function PageClient({
   useEffect(() => {
     if (
       data?.content?.contentType !== "image" ||
-      data.content.markdown === editedMarkdownRef.current
+      (data.content.markdown ?? "") === editedMarkdownRef.current
     ) {
       return;
     }
 
-    setEditedMarkdown(data.content.markdown);
-    setOriginalMarkdown(data.content.markdown);
-    originalMarkdownRef.current = data.content.markdown;
-    editedMarkdownRef.current = data.content.markdown;
+    const nextMarkdown = data.content.markdown ?? "";
+    setEditedMarkdown(nextMarkdown);
+    setOriginalMarkdown(nextMarkdown);
+    originalMarkdownRef.current = nextMarkdown;
+    editedMarkdownRef.current = nextMarkdown;
     setEditorKey((k) => k + 1);
   }, [data?.content]);
 
@@ -682,6 +685,8 @@ export default function PageClient({
   }
 
   const content = data.content;
+  const imageExportHtml =
+    content.contentType === "image" ? getImageExportHtml(content) : null;
   const collection = data.collection;
   const backHref = collection
     ? `/${organizationSlug}/collection/${collection.id}`
@@ -906,7 +911,11 @@ export default function PageClient({
                 <>
                   <Button
                     onClick={() =>
-                      copyImageAsFigma(imageExportRef.current, title)
+                      copyImageAsFigma(
+                        imageExportRef.current,
+                        title,
+                        imageExportHtml
+                      )
                     }
                     size="sm"
                     variant="outline"
@@ -916,7 +925,11 @@ export default function PageClient({
                   </Button>
                   <Button
                     onClick={() =>
-                      copyImageAsPaper(imageExportRef.current, title)
+                      copyImageAsPaper(
+                        imageExportRef.current,
+                        title,
+                        imageExportHtml
+                      )
                     }
                     size="sm"
                     variant="outline"
@@ -947,6 +960,8 @@ export default function PageClient({
               id: content.id,
               title: content.title,
               slug: content.slug,
+              content: content.content,
+              rawHtml: content.rawHtml,
               markdown: content.markdown,
               contentType: content.contentType,
               date: content.date,

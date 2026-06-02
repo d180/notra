@@ -2,11 +2,20 @@
 
 import { TitleCard } from "@notra/ui/components/ui/title-card";
 import Image from "next/image";
+import { isHttpImageContent } from "@/utils/image-content";
 import { extractMarkdownImageSrc } from "@/utils/markdown-image";
 import type { ContentEditorProps } from "./types";
 
+function getImageSrc(content: ContentEditorProps["content"]): string | null {
+  if (isHttpImageContent(content.content)) {
+    return content.content;
+  }
+
+  return extractMarkdownImageSrc(content.markdown ?? "");
+}
+
 export function ImageEditor({ content, imageExportRef }: ContentEditorProps) {
-  const imageSrc = extractMarkdownImageSrc(content.markdown);
+  const imageSrc = getImageSrc(content);
 
   return (
     <TitleCard
