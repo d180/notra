@@ -7,6 +7,12 @@ import type { z } from "zod";
 
 export type RepoImageMode = z.infer<typeof repoImageModeSchema>;
 
+export type RepoImageErrorCode =
+  | "missing_config"
+  | "agent_failed"
+  | "invalid_source"
+  | "not_found";
+
 export type GenerateRepoImageInput = z.infer<
   typeof generateRepoImageInputSchema
 >;

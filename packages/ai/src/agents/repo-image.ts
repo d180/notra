@@ -1,7 +1,11 @@
 import {
   AGENT_TIMEOUT_MS,
+  BOX_BASE_URL,
+  IMAGE_GEN_AGENT_SKILLS_INSTALL_COMMAND,
+  IMAGE_GEN_MODEL_ID,
   RECOVERY_AGENT_TIMEOUT_MS,
   REPO_IMAGE_OUTPUT_HTML_PATH,
+  TRAILING_SLASH_RE,
 } from "@notra/ai/constants/repo-image";
 import {
   getDecryptedToken,
@@ -15,30 +19,19 @@ import {
 import type {
   GenerateRepoImageInput,
   GenerateRepoImageResult,
+  RepoImageErrorCode,
   RepoImageSourceContext,
 } from "@notra/ai/types/repo-image";
 import { createOctokit } from "@notra/ai/utils/octokit";
 import { shortSha } from "@notra/ai/utils/repo-image";
 import { renderHtmlToImages } from "@notra/ai/utils/repo-image-render";
 import { withLongFetchTimeouts } from "@notra/ai/utils/undici-dispatcher";
-import { Agent, Box, OpenCodeModel } from "@upstash/box";
-
-const BOX_BASE_URL =
-  process.env.UPSTASH_BOX_BASE_URL ?? "https://us-east-1.box.upstash.com";
-const TRAILING_SLASH_RE = /\/$/;
-export const REPO_IMAGE_MODEL_ID = OpenCodeModel.Claude_Sonnet_4_6;
+import { Agent, Box } from "@upstash/box";
 
 export class RepoImageError extends Error {
-  readonly code:
-    | "missing_config"
-    | "agent_failed"
-    | "invalid_source"
-    | "not_found";
+  readonly code: RepoImageErrorCode;
 
-  constructor(
-    code: "missing_config" | "agent_failed" | "invalid_source" | "not_found",
-    message: string
-  ) {
+  constructor(code: RepoImageErrorCode, message: string) {
     super(message);
     this.name = "RepoImageError";
     this.code = code;
@@ -86,6 +79,14 @@ async function hasRepoImageOutput(box: Awaited<ReturnType<typeof Box.create>>) {
     )
   );
   return existsRun.result.trim() === "ok";
+}
+
+async function installImageGenAgentSkills(params: {
+  box: Awaited<ReturnType<typeof Box.create>>;
+}) {
+  await withBoxRetry(() =>
+    params.box.exec.command(IMAGE_GEN_AGENT_SKILLS_INSTALL_COMMAND)
+  );
 }
 
 async function withBoxRetry<T>(callback: () => Promise<T>, attempts = 3) {
@@ -303,7 +304,7 @@ export async function generateRepoImage(params: {
       },
       agent: {
         harness: Agent.OpenCode,
-        model: REPO_IMAGE_MODEL_ID,
+        model: IMAGE_GEN_MODEL_ID,
       },
       timeout: AGENT_TIMEOUT_MS,
     };
@@ -322,6 +323,11 @@ export async function generateRepoImage(params: {
           branch: input.branch,
         });
       }
+      await withBoxRetry(() => box.cd(repository.repo));
+
+      if (!restoreSnapshotId) {
+        await installImageGenAgentSkills({ box });
+      }
 
       const initialRun = await runRepoImageAgentStream({
         box,
@@ -336,7 +342,7 @@ export async function generateRepoImage(params: {
         timeout: AGENT_TIMEOUT_MS,
         label: restoreSnapshotId ? "revision" : "initial",
       });
-      usage = extractRepoImageUsage(initialRun.cost, REPO_IMAGE_MODEL_ID);
+      usage = extractRepoImageUsage(initialRun.cost, IMAGE_GEN_MODEL_ID);
 
       if (!(await hasRepoImageOutput(box))) {
         console.warn(
@@ -350,7 +356,7 @@ export async function generateRepoImage(params: {
         });
         usage = mergeRepoImageUsage(
           usage,
-          extractRepoImageUsage(recoveryRun.cost, REPO_IMAGE_MODEL_ID)
+          extractRepoImageUsage(recoveryRun.cost, IMAGE_GEN_MODEL_ID)
         );
       }
 

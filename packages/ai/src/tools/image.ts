@@ -1,12 +1,12 @@
 import {
   deleteRepoImageSnapshot,
   generateRepoImage,
-  REPO_IMAGE_MODEL_ID,
   RepoImageError,
 } from "@notra/ai/agents/repo-image";
 import { autumn } from "@notra/ai/billing/autumn";
 import { FEATURES } from "@notra/ai/billing/features";
 import { calculateTokenCostCents } from "@notra/ai/billing/token-pricing";
+import { IMAGE_GEN_MODEL_ID } from "@notra/ai/constants/repo-image";
 import {
   imageRevisionToolInputSchema,
   imageToolInputSchema,
@@ -240,7 +240,7 @@ async function trackImageGenerationUsage(params: {
 
   const costCents = calculateTokenCostCents(
     params.usage,
-    params.usage.modelId ?? REPO_IMAGE_MODEL_ID,
+    params.usage.modelId ?? IMAGE_GEN_MODEL_ID,
     params.useMarkup ?? false
   );
 
@@ -252,7 +252,7 @@ async function trackImageGenerationUsage(params: {
       properties: {
         source: "image_generation",
         post_id: params.postId,
-        model: params.usage.modelId ?? REPO_IMAGE_MODEL_ID,
+        model: params.usage.modelId ?? IMAGE_GEN_MODEL_ID,
         billing_basis: "tokens",
         input_tokens: params.usage.inputTokens,
         output_tokens: params.usage.outputTokens,
