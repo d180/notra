@@ -3,6 +3,7 @@ import {
   REPO_IMAGE_OUTPUT_HTML_PATH,
 } from "@notra/ai/constants/repo-image";
 import type { RepoImageSourceContext } from "@notra/ai/types/repo-image";
+import dedent from "dedent";
 
 function describeSource(source: RepoImageSourceContext): string {
   if (source.mode === "prompt") {
@@ -31,7 +32,7 @@ function describeSource(source: RepoImageSourceContext): string {
   ].join("\n");
 }
 
-export function buildExtractionPrompt(params: {
+export function buildMarketingAssetExtractionPrompt(params: {
   owner: string;
   repo: string;
   branch: string;
@@ -39,7 +40,7 @@ export function buildExtractionPrompt(params: {
 }) {
   const { owner, repo, branch, source } = params;
 
-  return `<role>
+  return dedent`<role>
 You are a senior brand designer translating real product UI into a single, polished 1200x630 marketing image. You design from the repo's actual components and tokens, not from memory or generic SaaS templates. The output must look like a real screenshot of a panel from this app.
 </role>
 
@@ -66,7 +67,7 @@ Gather source material before designing. Skipping this step produces generic out
 
 2. Design tokens: Read /workspace/home/${repo}/app/globals.css OR /workspace/home/${repo}/src/app/globals.css OR /workspace/home/${repo}/styles/globals.css. Pull the full theme palette: --background, --foreground, --primary, --secondary, --muted, --accent, --border, --card, --popover, destructive/success colors if present, and --radius. Convert oklch/hsl to hex and match these globals.css colors exactly. Do not approximate or invent nearby colors.
 
-3. Brand assets: Run \`find /workspace/home/${repo} -maxdepth 5 \\( -iname "*logo*" -o -iname "*brand*" -o -ipath "*branding*" \\) -type f 2>/dev/null | head -10\`. If a logo SVG/PNG fits the design, base64-encode it and inline it as <img src="data:..."> in the HTML.
+3. Brand assets: Run \`find /workspace/home/${repo} -maxdepth 5 \\( -iname "*logo*" -o -iname "*brand*" -o -ipath "*branding*" \\) -type f 2>/dev/null | head -10\`. If a repo logo SVG/PNG fits the design, base64-encode it and inline it as <img src="data:..."> in the HTML. If repo-specific assets are not present or not enough, use official brand/product/tool logos through brand-logos instead of hand-drawing or inventing logos.
 
 4. Feature files: Run \`grep -ril "<keyword>" /workspace/home/${repo}/app /workspace/home/${repo}/src --include="*.tsx" --include="*.jsx" --include="*.vue" 2>/dev/null | head -10\`. Open 2 to 4 of the top hits and study layout, headings, primary CTA, surface colors, component structure, spacing, borders, and radius values.
 
@@ -154,7 +155,7 @@ Check for:
 - Visual fidelity: wrong globals.css colors, radius, border weight, spacing scale, font weight, button style, surface treatment, or component structure compared to how the repo uses these in the real app.
 - Polish: empty-looking areas, clutter, visual imbalance, low-quality decorative elements, fake badges, generic SaaS tropes, anything that would look cheap in a launch post.
 
-If any issue is present, fix the draft and re-check. Repeat until you would ship this as a polished social image for a Fortune 500 brand. Only then write the reviewed HTML to ${REPO_IMAGE_OUTPUT_HTML_PATH}.
+If any issue is present, fix the draft and re-check. Repeat until you would ship this as a polished marketing asset for a Fortune 500 brand. Only then write the reviewed HTML to ${REPO_IMAGE_OUTPUT_HTML_PATH}.
 </quality-loop>
 
 <output-format>
@@ -187,9 +188,9 @@ Before writing HTML, decide which real component or page in this repo best match
 </thinking-instructions>`;
 }
 
-export function buildRevisionPrompt(params: { prompt: string }) {
-  return `<role>
-You are a senior brand designer editing an existing generated social image. You are working inside a restored sandbox snapshot that already contains the repository context and the current HTML deliverable.
+export function buildMarketingAssetRevisionPrompt(params: { prompt: string }) {
+  return dedent`<role>
+You are a senior brand designer editing an existing generated marketing asset. You are working inside a restored sandbox snapshot that already contains the repository context and the current HTML deliverable.
 </role>
 
 <task>

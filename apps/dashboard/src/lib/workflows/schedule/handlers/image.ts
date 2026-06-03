@@ -104,7 +104,7 @@ export async function handleImage(
 
 function buildImagePrompt(ctx: ContentGenerationContext) {
   const promptParts = [
-    `Create a polished 1200x630 social image for: ${ctx.promptInput.sourceTargets}.`,
+    `Create a polished 1200x630 marketing asset for: ${ctx.promptInput.sourceTargets}.`,
     `Use repository activity from ${ctx.promptInput.lookbackLabel} (${ctx.promptInput.lookbackStartIso} to ${ctx.promptInput.lookbackEndIso}).`,
     ctx.promptInput.companyName
       ? `Company name: ${ctx.promptInput.companyName}.`

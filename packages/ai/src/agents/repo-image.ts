@@ -13,9 +13,9 @@ import {
   validateRepositoryBranchExists,
 } from "@notra/ai/integrations/github";
 import {
-  buildExtractionPrompt,
-  buildRevisionPrompt,
-} from "@notra/ai/prompts/repo-image";
+  buildMarketingAssetExtractionPrompt,
+  buildMarketingAssetRevisionPrompt,
+} from "@notra/ai/prompts/marketing-assets";
 import type {
   GenerateRepoImageInput,
   GenerateRepoImageResult,
@@ -368,8 +368,8 @@ export async function generateRepoImage(params: {
       const initialRun = await runInitialRepoImageAgent({
         box,
         prompt: restoreSnapshotId
-          ? buildRevisionPrompt({ prompt: input.prompt ?? "" })
-          : buildExtractionPrompt({
+          ? buildMarketingAssetRevisionPrompt({ prompt: input.prompt ?? "" })
+          : buildMarketingAssetExtractionPrompt({
               owner: repository.owner,
               repo: repository.repo,
               branch: input.branch,

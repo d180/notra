@@ -29,9 +29,9 @@ export function createImageTool(config: ImageToolConfig): Tool {
     description: toolDescription({
       toolName: "createImage",
       intro:
-        "Generates a 1200x630 social image from a connected GitHub repository in a sandbox, saves the image as content, and snapshots the sandbox for later follow-up work.",
+        "Generates a 1200x630 marketing asset from a connected GitHub repository in a sandbox, saves the image as content, and snapshots the sandbox for later follow-up work.",
       whenToUse:
-        "When the user asks to create, generate, revise, or continue an image/visual/social card from repository context.",
+        "When the user asks to create, generate, revise, or continue a marketing image, visual, or social card from repository context.",
       usageNotes:
         "Requires integrationId and branch. For revisions, pass sourcePostId when the user refers to a prior generated image so the sandbox can be restored from its snapshot.",
     }),
@@ -105,7 +105,7 @@ export function createImageRevisionTool(config: ImageRevisionToolConfig): Tool {
     description: toolDescription({
       toolName: "reviseImage",
       intro:
-        "Revises the current generated image by restoring its saved sandbox snapshot, applying the requested visual change, rendering a new 1200x630 PNG, saving it back to this image content item, and snapshotting the sandbox again.",
+        "Revises the current generated marketing asset by restoring its saved sandbox snapshot, applying the requested visual change, rendering a new 1200x630 PNG, saving it back to this image content item, and snapshotting the sandbox again.",
       whenToUse:
         "When editing or revising the current image content item. Use this instead of markdown editing.",
       usageNotes:
@@ -250,7 +250,7 @@ async function trackImageGenerationUsage(params: {
       featureId: FEATURES.AI_CREDITS,
       value: costCents,
       properties: {
-        source: "image_generation",
+        source: "marketing_assets",
         post_id: params.postId,
         model: params.usage.modelId ?? IMAGE_GEN_MODEL_ID,
         billing_basis: "tokens",
@@ -265,7 +265,7 @@ async function trackImageGenerationUsage(params: {
       },
     });
   } catch (error) {
-    console.error("[Autumn] Track error after image generation:", {
+    console.error("[Autumn] Track error after marketing asset generation:", {
       customerId: params.organizationId,
       postId: params.postId,
       error,
