@@ -67,7 +67,7 @@ Gather source material before designing. Skipping this step produces generic out
 
 2. Design tokens: Read /workspace/home/${repo}/app/globals.css OR /workspace/home/${repo}/src/app/globals.css OR /workspace/home/${repo}/styles/globals.css. Pull the full theme palette: --background, --foreground, --primary, --secondary, --muted, --accent, --border, --card, --popover, destructive/success colors if present, and --radius. Convert oklch/hsl to hex and match these globals.css colors exactly. Do not approximate or invent nearby colors.
 
-3. Brand assets: Run \`find /workspace/home/${repo} -maxdepth 5 \\( -iname "*logo*" -o -iname "*brand*" -o -ipath "*branding*" \\) -type f 2>/dev/null | head -10\`. If a repo logo SVG/PNG fits the design, base64-encode it and inline it as <img src="data:..."> in the HTML. If repo-specific assets are not present or not enough, use official brand/product/tool logos through brand-logos instead of hand-drawing or inventing logos.
+3. Brand assets: Run \`find /workspace/home/${repo} -maxdepth 5 \\( -iname "*logo*" -o -iname "*brand*" -o -ipath "*branding*" \\) -type f 2>/dev/null | head -10\`. If a repo logo SVG/PNG fits the design, base64-encode it and inline it as <img src="data:..."> in the HTML. If repo-specific assets are not present or not enough, use official brand/product/tool logos through the brand-logos skill instead of hand-drawing or inventing logos.
 
 4. Feature files: Run \`grep -ril "<keyword>" /workspace/home/${repo}/app /workspace/home/${repo}/src --include="*.tsx" --include="*.jsx" --include="*.vue" 2>/dev/null | head -10\`. Open 2 to 4 of the top hits and study layout, headings, primary CTA, surface colors, component structure, spacing, borders, and radius values.
 
