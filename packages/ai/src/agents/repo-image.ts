@@ -14,6 +14,7 @@ import {
 } from "@notra/ai/integrations/github";
 import {
   buildMarketingAssetExtractionPrompt,
+  buildMarketingAssetMissingOutputPrompt,
   buildMarketingAssetRevisionPrompt,
 } from "@notra/ai/prompts/marketing-assets";
 import type {
@@ -155,17 +156,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function buildMissingOutputRecoveryPrompt() {
-  return `Your previous run ended without creating the required deliverable.
-
-You MUST now create this exact file:
-
-  ${REPO_IMAGE_OUTPUT_HTML_PATH}
-
-Do not do more research unless absolutely necessary. If you already made a draft HTML file, copy or rewrite that final HTML to ${REPO_IMAGE_OUTPUT_HTML_PATH}. If no draft exists, immediately create a valid 1200x630 single HTML document that follows the original instructions.
-
-Use the Write tool or shell redirection to create ${REPO_IMAGE_OUTPUT_HTML_PATH}. After the file exists, stop.`;
-}
+const MISSING_OUTPUT_RECOVERY_ATTEMPTS = 3;
 
 async function buildSourceContext(params: {
   mode: GenerateRepoImageInput["mode"];
@@ -381,29 +372,39 @@ export async function generateRepoImage(params: {
       usage = extractRepoImageUsage(initialRun?.cost, IMAGE_GEN_MODEL_ID);
 
       if (!(await hasRepoImageOutput(box))) {
-        console.warn(
-          `[repo-image] missing ${REPO_IMAGE_OUTPUT_HTML_PATH}; asking agent to recover`
-        );
-        const recoveryRun = await runRepoImageAgentStreamAllowTimeout({
-          box,
-          prompt: buildMissingOutputRecoveryPrompt(),
-          timeout: RECOVERY_AGENT_TIMEOUT_MS,
-          label: "recovery",
-        });
-        usage = mergeRepoImageUsage(
-          usage,
-          extractRepoImageUsage(recoveryRun?.cost, IMAGE_GEN_MODEL_ID)
-        );
+        for (
+          let attempt = 1;
+          attempt <= MISSING_OUTPUT_RECOVERY_ATTEMPTS;
+          attempt++
+        ) {
+          console.warn(
+            `[repo-image] missing ${REPO_IMAGE_OUTPUT_HTML_PATH}; recovery attempt ${attempt}/${MISSING_OUTPUT_RECOVERY_ATTEMPTS}`
+          );
+          const recoveryRun = await runRepoImageAgentStreamAllowTimeout({
+            box,
+            prompt: buildMarketingAssetMissingOutputPrompt(),
+            timeout: RECOVERY_AGENT_TIMEOUT_MS,
+            label: `recovery-${attempt}`,
+          });
+          usage = mergeRepoImageUsage(
+            usage,
+            extractRepoImageUsage(recoveryRun?.cost, IMAGE_GEN_MODEL_ID)
+          );
+
+          if (await hasRepoImageOutput(box)) {
+            break;
+          }
+        }
       }
 
       if (!(await hasRepoImageOutput(box))) {
         const diag = await withBoxRetry(() =>
           box.exec.command(
-            `ls -la /workspace/home/ 2>&1 | head -50; echo ---; find /workspace/home -maxdepth 4 -name "output.html" 2>/dev/null`
+            `pwd 2>&1; echo ---; ls -la 2>&1 | head -50; echo ---; find . /workspace/home -maxdepth 4 -name "output.html" 2>/dev/null`
           )
         );
         console.error(
-          "[repo-image] missing output.html, /workspace/home contents:\n",
+          "[repo-image] missing output.html, cwd contents:\n",
           diag.result
         );
         throw new RepoImageError(

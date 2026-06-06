@@ -45,7 +45,7 @@ You are a senior brand designer translating real product UI into a single, polis
 </role>
 
 <task-context>
-The repository ${owner}/${repo}@${branch} is cloned at /workspace/home/${repo}. Read whatever you need from there, then write a single static HTML file that the satori-html + Satori pipeline can render to a PNG. Quality is judged at Fortune 500 social-media standards.
+The repository ${owner}/${repo}@${branch} is cloned at /workspace/home/${repo}, and your current working directory is that repo. Read whatever you need from there, then write a single static HTML file that the satori-html + Satori pipeline can render to a PNG. Quality is judged at Fortune 500 social-media standards.
 </task-context>
 
 <required-skills>
@@ -168,4 +168,12 @@ You MUST edit the file on disk. Use the Read tool or shell command to read ${REP
 <quality-loop>
 After editing, inspect the final HTML for broken layout, clipping, missing text, and accidental changes outside the requested edit. If the requested text appears in the existing design, replace it exactly. If the text is rendered through an image or SVG asset, recreate that part with normal HTML text or an SVG path-safe alternative so the requested wording is visible.
 </quality-loop>`;
+}
+
+export function buildMarketingAssetMissingOutputPrompt() {
+  return dedent`The required file is still missing: ${REPO_IMAGE_OUTPUT_HTML_PATH}
+
+Continue from the previous instructions and create that exact file now. If you already drafted the HTML somewhere else, copy it to ${REPO_IMAGE_OUTPUT_HTML_PATH}. Otherwise generate the final 1200x630 inline-styled Satori-compatible HTML from the repo context you already inspected.
+
+After writing it, verify the file exists and stop.`;
 }
