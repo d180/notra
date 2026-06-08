@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
+    "backfill:image-html-artifacts": "bun run scripts/backfill-image-html-artifacts.ts",
     "check-types": "tsc --noEmit"
   },
   "exports": {
