@@ -2,7 +2,6 @@ import { C15tPrefetch } from "@c15t/nextjs";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Noto_Sans } from "next/font/google";
 import "@/styles/globals.css";
-import { Analytics } from "@vercel/analytics/next";
 
 import { ConsentManager } from "@/components/consent-manager";
 import { Providers } from "@/utils/providers";
@@ -59,7 +58,6 @@ export default function RootLayout({
         <Providers>
           <ConsentManager>{children}</ConsentManager>
         </Providers>
-        <Analytics />
       </body>
     </html>
   );
