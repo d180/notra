@@ -21,7 +21,7 @@ export function ThemeToggle() {
     setTheme(isDark ? "light" : "dark");
   }
 
-  useHotkey("M", handleToggle);
+  useHotkey("D", handleToggle);
 
   let ariaLabel = "Toggle theme";
   if (mounted && isDark) {

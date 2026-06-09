@@ -51,7 +51,7 @@ export function ThemeToggle() {
           <span className="flex-1 text-left text-sm">
             {isDark ? "Light Mode" : "Dark Mode"}
           </span>
-          <Kbd className="ml-auto">M</Kbd>
+          <Kbd className="ml-auto">D</Kbd>
         </>
       )}
     </SidebarMenuButton>

@@ -122,12 +122,12 @@ export function SiteHeader() {
     })();
   }, []);
 
-  useHotkey("D", () => {
-    triggerScheduleDemo();
-  });
-
   useHotkey("F", () => {
     openFeedback();
+  });
+
+  useHotkey("S", () => {
+    triggerScheduleDemo();
   });
 
   const isNonOrgPath = NON_ORG_PATHS.some((path) => pathname.startsWith(path));
@@ -260,7 +260,7 @@ export function SiteHeader() {
             >
               <HugeiconsIcon icon={Calendar03Icon} size={16} />
               Schedule a Demo
-              <Kbd className="ml-1 hidden sm:inline-flex">D</Kbd>
+              <Kbd className="ml-1 hidden sm:inline-flex">S</Kbd>
             </Button>
           </div>
           <DropdownMenu onOpenChange={setMobileMenuOpen} open={mobileMenuOpen}>

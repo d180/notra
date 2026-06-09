@@ -63,7 +63,7 @@ export function NavUser() {
   const user = session?.user;
   const slug = activeOrganization?.slug ?? "";
 
-  useHotkey("M", toggleTheme);
+  useHotkey("D", toggleTheme);
 
   useEffect(() => {
     setHasHydrated(true);
@@ -234,7 +234,7 @@ export function NavUser() {
               >
                 <HugeiconsIcon icon={isDark ? Sun03Icon : Moon02Icon} />
                 {isDark ? "Light Mode" : "Dark Mode"}
-                <Kbd className="ml-auto">M</Kbd>
+                <Kbd className="ml-auto">D</Kbd>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
