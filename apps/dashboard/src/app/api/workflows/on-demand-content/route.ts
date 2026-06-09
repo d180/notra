@@ -1,6 +1,6 @@
+import { calculateAiCreditCostCents } from "@notra/ai/billing/ai-credit-cost";
 import { autumn } from "@notra/ai/billing/autumn";
 import { FEATURES } from "@notra/ai/billing/features";
-import { calculateTokenCostCents } from "@notra/ai/billing/token-pricing";
 import { getGitHubToolRepositoryContextByIntegrationId } from "@notra/ai/integrations/github";
 import { getLinearToolContextByIntegrationId } from "@notra/ai/integrations/linear";
 import { getBaseUrl } from "@notra/ai/qstash/triggers";
@@ -834,7 +834,7 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
       const contentUsage = contentResult.usage;
       if (aiCreditReserved && autumnClient && contentUsage) {
         await context.run("track-ai-credit-usage", async () => {
-          const costCents = calculateTokenCostCents(
+          const cost = calculateAiCreditCostCents(
             contentUsage,
             contentUsage.modelId ?? "anthropic/claude-sonnet-4.6",
             aiCreditMarkup
@@ -842,12 +842,12 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
           await autumnClient.track({
             customerId: organizationId,
             featureId: FEATURES.AI_CREDITS,
-            value: costCents,
+            value: cost.costCents,
             properties: {
               source: "manual",
               output_type: contentType,
               model: contentResult.usage?.modelId,
-              billing_basis: "tokens",
+              billing_basis: cost.billingBasis,
               input_tokens: contentResult.usage?.inputTokens,
               output_tokens: contentResult.usage?.outputTokens,
               cache_read_tokens: contentResult.usage?.cacheReadTokens,
@@ -855,7 +855,9 @@ export const { POST } = serve<ContentGenerationWorkflowPayload>(
               total_tokens: contentResult.usage?.totalTokens,
               sandbox_total_usd: contentResult.usage?.totalUsd,
               markup_applied: aiCreditMarkup,
-              cost_cents: costCents,
+              cost_cents: cost.costCents,
+              reported_cost_cents: cost.reportedCostCents,
+              token_cost_cents: cost.tokenCostCents,
             },
           });
         });

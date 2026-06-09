@@ -3,9 +3,9 @@ import {
   generateRepoImage,
   RepoImageError,
 } from "@notra/ai/agents/repo-image";
+import { calculateAiCreditCostCents } from "@notra/ai/billing/ai-credit-cost";
 import { autumn } from "@notra/ai/billing/autumn";
 import { FEATURES } from "@notra/ai/billing/features";
-import { calculateTokenCostCents } from "@notra/ai/billing/token-pricing";
 import { IMAGE_GEN_MODEL_ID } from "@notra/ai/constants/repo-image";
 import {
   imageRevisionToolInputSchema,
@@ -245,23 +245,20 @@ async function trackImageGenerationUsage(params: {
     return;
   }
 
-  const costCents = calculateTokenCostCents(
+  const cost = calculateAiCreditCostCents(
     params.usage,
     params.usage.modelId ?? IMAGE_GEN_MODEL_ID,
     params.useMarkup ?? false
   );
-  const reportedCostCents =
-    typeof params.usage.totalUsd === "number"
-      ? Math.ceil(params.usage.totalUsd * 100)
-      : undefined;
 
   console.info("[Autumn] Marketing asset usage cost comparison", {
     organizationId: params.organizationId,
     postId: params.postId,
     model: params.usage.modelId ?? IMAGE_GEN_MODEL_ID,
-    billingBasis: "tokens",
-    computedCostCents: costCents,
-    reportedCostCents,
+    billingBasis: cost.billingBasis,
+    computedCostCents: cost.costCents,
+    reportedCostCents: cost.reportedCostCents,
+    tokenCostCents: cost.tokenCostCents,
     reportedTotalUsd: params.usage.totalUsd,
     inputTokens: params.usage.inputTokens,
     outputTokens: params.usage.outputTokens,
@@ -275,12 +272,12 @@ async function trackImageGenerationUsage(params: {
     await autumn.track({
       customerId: params.organizationId,
       featureId: FEATURES.AI_CREDITS,
-      value: costCents,
+      value: cost.costCents,
       properties: {
         source: "marketing_assets",
         post_id: params.postId,
         model: params.usage.modelId ?? IMAGE_GEN_MODEL_ID,
-        billing_basis: "tokens",
+        billing_basis: cost.billingBasis,
         input_tokens: params.usage.inputTokens,
         output_tokens: params.usage.outputTokens,
         cache_read_tokens: params.usage.cacheReadTokens,
@@ -288,7 +285,9 @@ async function trackImageGenerationUsage(params: {
         total_tokens: params.usage.totalTokens,
         sandbox_total_usd: params.usage.totalUsd,
         markup_applied: params.useMarkup ?? false,
-        cost_cents: costCents,
+        cost_cents: cost.costCents,
+        reported_cost_cents: cost.reportedCostCents,
+        token_cost_cents: cost.tokenCostCents,
       },
     });
   } catch (error) {

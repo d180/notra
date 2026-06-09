@@ -1,6 +1,6 @@
+import { calculateAiCreditCostCents } from "@notra/ai/billing/ai-credit-cost";
 import { autumn } from "@notra/ai/billing/autumn";
 import { FEATURES } from "@notra/ai/billing/features";
-import { calculateTokenCostCents } from "@notra/ai/billing/token-pricing";
 import { getGitHubToolRepositoryContextByIntegrationId } from "@notra/ai/integrations/github";
 import { getLinearToolContextByIntegrationId } from "@notra/ai/integrations/linear";
 import { getBaseUrl, triggerScheduleNow } from "@notra/ai/qstash/triggers";
@@ -1161,7 +1161,7 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
       const contentUsage = contentResult.usage;
       if (aiCreditReservation.reserved && autumnClientSuccess && contentUsage) {
         await context.run("track-ai-credit-usage", async () => {
-          const costCents = calculateTokenCostCents(
+          const cost = calculateAiCreditCostCents(
             contentUsage,
             contentUsage.modelId ?? "anthropic/claude-sonnet-4.6",
             aiCreditReservation.useMarkup
@@ -1169,13 +1169,13 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
           await autumnClientSuccess.track({
             customerId: trigger.organizationId,
             featureId: FEATURES.AI_CREDITS,
-            value: costCents,
+            value: cost.costCents,
             properties: {
               source: "workflow_schedule",
               output_type: trigger.outputType,
               trigger_name: trigger.name,
               model: contentResult.usage?.modelId,
-              billing_basis: "tokens",
+              billing_basis: cost.billingBasis,
               input_tokens: contentResult.usage?.inputTokens,
               output_tokens: contentResult.usage?.outputTokens,
               cache_read_tokens: contentResult.usage?.cacheReadTokens,
@@ -1183,7 +1183,9 @@ export const { POST } = serve<ScheduleWorkflowPayload>(
               total_tokens: contentResult.usage?.totalTokens,
               sandbox_total_usd: contentResult.usage?.totalUsd,
               markup_applied: aiCreditReservation.useMarkup,
-              cost_cents: costCents,
+              cost_cents: cost.costCents,
+              reported_cost_cents: cost.reportedCostCents,
+              token_cost_cents: cost.tokenCostCents,
             },
           });
         });

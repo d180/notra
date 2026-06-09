@@ -1,9 +1,7 @@
+import { calculateAiCreditCostCents } from "@notra/ai/billing/ai-credit-cost";
 import { autumn } from "@notra/ai/billing/autumn";
 import { FEATURES } from "@notra/ai/billing/features";
-import {
-  calculateTokenCostCents,
-  shouldApplyMarkup,
-} from "@notra/ai/billing/token-pricing";
+import { shouldApplyMarkup } from "@notra/ai/billing/token-pricing";
 import { useLogger, withEvlog } from "@notra/ai/evlog";
 import {
   getGitHubIntegrationById,
@@ -173,7 +171,7 @@ export const POST = withEvlog(async function POST(
             return;
           }
 
-          const costCents = calculateTokenCostCents(
+          const cost = calculateAiCreditCostCents(
             {
               inputTokens: usage.inputTokens ?? 0,
               outputTokens: usage.outputTokens ?? 0,
@@ -189,11 +187,12 @@ export const POST = withEvlog(async function POST(
             await autumnClient.track({
               customerId: organizationId,
               featureId: FEATURES.AI_CREDITS,
-              value: costCents,
+              value: cost.costCents,
               properties: {
                 source: "chat",
                 content_id: contentId,
                 model: modelId,
+                billing_basis: cost.billingBasis,
                 input_tokens: usage.inputTokens ?? 0,
                 output_tokens: usage.outputTokens ?? 0,
                 cache_read_tokens:
@@ -201,7 +200,8 @@ export const POST = withEvlog(async function POST(
                 cache_write_tokens:
                   usage.inputTokenDetails?.cacheWriteTokens ?? 0,
                 total_tokens: usage.totalTokens ?? 0,
-                cost_cents: costCents,
+                cost_cents: cost.costCents,
+                token_cost_cents: cost.tokenCostCents,
               },
             });
           } catch (trackError) {

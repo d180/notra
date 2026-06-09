@@ -1,6 +1,6 @@
+import { calculateAiCreditCostCents } from "@notra/ai/billing/ai-credit-cost";
 import { autumn } from "@notra/ai/billing/autumn";
 import { FEATURES } from "@notra/ai/billing/features";
-import { calculateTokenCostCents } from "@notra/ai/billing/token-pricing";
 import { startChatAbortPolling } from "@notra/ai/chat/abort-polling";
 import {
   clearActiveChatStream,
@@ -174,7 +174,7 @@ export const chatWorkflowHandler = serve<ChatWorkflowPayload>(
               return;
             }
 
-            const costCents = calculateTokenCostCents(
+            const cost = calculateAiCreditCostCents(
               {
                 inputTokens: usage.inputTokens ?? 0,
                 outputTokens: usage.outputTokens ?? 0,
@@ -191,10 +191,11 @@ export const chatWorkflowHandler = serve<ChatWorkflowPayload>(
               await autumn.track({
                 customerId: organizationId,
                 featureId: FEATURES.AI_CREDITS,
-                value: costCents,
+                value: cost.costCents,
                 properties: {
                   source: "standalone_chat",
                   model: modelId,
+                  billing_basis: cost.billingBasis,
                   input_tokens: usage.inputTokens ?? 0,
                   output_tokens: usage.outputTokens ?? 0,
                   cache_read_tokens:
@@ -202,7 +203,8 @@ export const chatWorkflowHandler = serve<ChatWorkflowPayload>(
                   cache_write_tokens:
                     usage.inputTokenDetails?.cacheWriteTokens ?? 0,
                   total_tokens: usage.totalTokens ?? 0,
-                  cost_cents: costCents,
+                  cost_cents: cost.costCents,
+                  token_cost_cents: cost.tokenCostCents,
                 },
               });
             } catch (trackError) {
