@@ -1,6 +1,11 @@
 import { copyAsFigma } from "@notra/kiwi";
 import { copyAsPaper } from "@notra/kiwi/paper";
 import { toast } from "sonner";
+import {
+  buildImageDownloadFilename,
+  downloadBlob,
+  sanitizeDownloadFilename,
+} from "@/utils/download";
 
 function createExportElement(html: string): HTMLDivElement {
   const container = document.createElement("div");
@@ -103,5 +108,31 @@ export async function copyImageAsPaper(
   } catch (error) {
     console.error("Failed to copy image for Paper", error);
     toast.error("Failed to copy for Paper");
+  }
+}
+
+export async function downloadImage(
+  imageUrl: string | null | undefined,
+  label?: string
+): Promise<void> {
+  if (!imageUrl) {
+    toast.error("Image is not ready yet");
+    return;
+  }
+
+  const baseName = sanitizeDownloadFilename(label ?? "image") || "image";
+
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download image: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    downloadBlob(blob, buildImageDownloadFilename(baseName, blob.type, "png"));
+    toast.success("Downloaded image");
+  } catch (error) {
+    console.error("Failed to download image", error);
+    toast.error("Failed to download image");
   }
 }

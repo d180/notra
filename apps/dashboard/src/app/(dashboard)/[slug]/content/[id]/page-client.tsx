@@ -2,7 +2,9 @@
 
 import { useChat } from "@ai-sdk/react";
 import {
+  ArrowDown01Icon,
   ArrowLeft02Icon,
+  Download01Icon,
   SentIcon,
   TextIcon,
 } from "@hugeicons/core-free-icons";
@@ -15,10 +17,18 @@ import {
 } from "@notra/ui/components/ui/avatar";
 import { Badge } from "@notra/ui/components/ui/badge";
 import { Button } from "@notra/ui/components/ui/button";
+import { ButtonGroup } from "@notra/ui/components/ui/button-group";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@notra/ui/components/ui/dropdown-menu";
 import { useSidebar } from "@notra/ui/components/ui/sidebar";
-import { Figma } from "@notra/ui/components/ui/svgs/figma";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
-import { Paper } from "@notra/ui/components/ui/svgs/paper";
 import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
 import {
   Tooltip,
@@ -35,24 +45,36 @@ import ChatInput from "@/components/chat-input";
 import { getContentTypeLabel } from "@/components/content/content-card";
 import type { EditorRefHandle } from "@/components/content/editor/plugins/editor-ref-plugin";
 import { ContentEditorSwitch } from "@/components/content/editors";
+import { ImageExportTargetIcon } from "@/components/content/image-export-target-icon";
 import { RecommendationsSection } from "@/components/content/recommendations-section";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
+import { CONTENT_TITLE_REGEX } from "@/constants/content-detail";
+import { IMAGE_EXPORT_TARGETS } from "@/constants/image-export";
 import { LINKEDIN_BRAND_PRIMARY } from "@/constants/linkedin";
+import { localStorageKeys } from "@/constants/storage";
 import { TWITTER_BRAND_COLOR } from "@/constants/twitter";
-import { copyImageAsFigma, copyImageAsPaper } from "@/lib/content/image-export";
+import {
+  copyImageAsFigma,
+  copyImageAsPaper,
+  downloadImage,
+} from "@/lib/content/image-export";
 import { dashboardOrpc } from "@/lib/orpc/query";
+import { cn } from "@/lib/utils";
 import { sourceMetadataSchema } from "@/schemas/content";
 import type { ContentDetailPageClientProps } from "@/types/content/detail";
+import type { ImageExportTarget } from "@/types/content/image-export";
 import type { BrandSettings } from "@/types/hooks/brand-analysis";
 import { getBrandFaviconUrl } from "@/utils/brand";
 import { formatSnakeCaseLabel } from "@/utils/format";
-import { getImageExportHtml } from "@/utils/image-content";
+import { getImageExportHtml, isHttpImageContent } from "@/utils/image-content";
+import {
+  getImageExportTargetLabel,
+  isImageExportTarget,
+} from "@/utils/image-export";
 import { createLinkedInPostUrl } from "@/utils/linkedin";
 import { createTwitterPostUrl } from "@/utils/twitter";
 import { useContent } from "../../../../../lib/hooks/use-content";
 import { ContentDetailSkeleton } from "./skeleton";
-
-const TITLE_REGEX = /^#\s+(.+)$/m;
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat(undefined, {
@@ -64,7 +86,7 @@ function formatDate(date: Date): string {
 }
 
 function extractTitleFromMarkdown(markdown: string): string {
-  const match = markdown.match(TITLE_REGEX);
+  const match = markdown.match(CONTENT_TITLE_REGEX);
   return match?.[1] ?? "Untitled";
 }
 
@@ -121,6 +143,8 @@ export default function PageClient({
   const [editorKey, setEditorKey] = useState(0);
   const [context, setContext] = useState<ContextItem[]>([]);
   const [chatInputValue, setChatInputValue] = useState("");
+  const [imageExportTarget, setImageExportTarget] =
+    useState<ImageExportTarget>("paper");
 
   const saveToastIdRef = useRef<string | number | null>(null);
   const editorRef = useRef<EditorRefHandle | null>(null);
@@ -130,6 +154,28 @@ export default function PageClient({
   const needsNormalizationRef = useRef(false);
   const originalMarkdownRef = useRef("");
   const editedMarkdownRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const storedTarget = window.localStorage.getItem(
+      localStorageKeys.imageExportTarget
+    );
+    if (
+      storedTarget &&
+      isImageExportTarget(storedTarget) &&
+      storedTarget !== "wonder"
+    ) {
+      setImageExportTarget(storedTarget);
+    }
+  }, []);
+
+  const handleImageExportTargetChange = useCallback((value: string) => {
+    if (!isImageExportTarget(value) || value === "wonder") {
+      return;
+    }
+
+    setImageExportTarget(value);
+    window.localStorage.setItem(localStorageKeys.imageExportTarget, value);
+  }, []);
 
   useEffect(() => {
     if (data?.content && editedMarkdown === null) {
@@ -689,6 +735,28 @@ export default function PageClient({
     content.contentType === "image" ? getImageExportHtml(content) : null;
   const imageExportHtmlUrl =
     content.contentType === "image" ? content.htmlUrl : null;
+  const imageDownloadUrl =
+    content.contentType === "image" && isHttpImageContent(content.content)
+      ? content.content
+      : null;
+  const handleCopyImageExport = () => {
+    if (imageExportTarget === "figma") {
+      copyImageAsFigma(
+        imageExportRef.current,
+        title,
+        imageExportHtml,
+        imageExportHtmlUrl
+      );
+      return;
+    }
+
+    copyImageAsPaper(
+      imageExportRef.current,
+      title,
+      imageExportHtml,
+      imageExportHtmlUrl
+    );
+  };
   const collection = data.collection;
   const backHref = collection
     ? `/${organizationSlug}/collection/${collection.id}`
@@ -912,35 +980,79 @@ export default function PageClient({
               {content.contentType === "image" && (
                 <>
                   <Button
-                    onClick={() =>
-                      copyImageAsFigma(
-                        imageExportRef.current,
-                        title,
-                        imageExportHtml,
-                        imageExportHtmlUrl
-                      )
-                    }
+                    onClick={() => downloadImage(imageDownloadUrl, title)}
                     size="sm"
                     variant="outline"
                   >
-                    <Figma className="size-4" />
-                    Copy for Figma
+                    <HugeiconsIcon className="size-4" icon={Download01Icon} />
+                    Download image
                   </Button>
-                  <Button
-                    onClick={() =>
-                      copyImageAsPaper(
-                        imageExportRef.current,
-                        title,
-                        imageExportHtml,
-                        imageExportHtmlUrl
-                      )
-                    }
-                    size="sm"
-                    variant="outline"
-                  >
-                    <Paper className="size-4" />
-                    Copy for Paper
-                  </Button>
+                  <ButtonGroup>
+                    <Button
+                      onClick={handleCopyImageExport}
+                      size="sm"
+                      variant="outline"
+                    >
+                      <ImageExportTargetIcon
+                        className="size-4"
+                        target={imageExportTarget}
+                      />
+                      Copy for {getImageExportTargetLabel(imageExportTarget)}
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={<Button size="icon-sm" variant="outline" />}
+                      >
+                        <span className="sr-only">Select export target</span>
+                        <HugeiconsIcon
+                          className="size-4"
+                          icon={ArrowDown01Icon}
+                        />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuLabel>Copy target</DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                          onValueChange={handleImageExportTargetChange}
+                          value={imageExportTarget}
+                        >
+                          {IMAGE_EXPORT_TARGETS.map((target) => {
+                            const isWonder = target === "wonder";
+
+                            return (
+                              <DropdownMenuRadioItem
+                                className={cn(
+                                  "gap-2",
+                                  isWonder && "items-start"
+                                )}
+                                disabled={isWonder}
+                                key={target}
+                                value={target}
+                              >
+                                <ImageExportTargetIcon
+                                  className="mt-0.5 size-4"
+                                  target={target}
+                                />
+                                <span className="flex flex-col">
+                                  <span>
+                                    {getImageExportTargetLabel(target)}
+                                  </span>
+                                  {isWonder && (
+                                    <span className="text-muted-foreground text-xs">
+                                      Coming soon
+                                    </span>
+                                  )}
+                                </span>
+                              </DropdownMenuRadioItem>
+                            );
+                          })}
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                        <div className="px-1.5 py-1 text-muted-foreground text-xs">
+                          Selection is saved on this device.
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </ButtonGroup>
                 </>
               )}
             </div>
