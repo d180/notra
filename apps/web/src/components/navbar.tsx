@@ -400,6 +400,9 @@ export function Navbar({ variant }: NavbarProps = {}) {
                   if (open && details.reason === "trigger-press") {
                     return;
                   }
+                  if (!open && details.reason === "trigger-hover") {
+                    return;
+                  }
                   setLogoMenuOpen(open);
                 }}
                 open={logoMenuOpen}
