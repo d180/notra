@@ -1,6 +1,4 @@
-import { Download01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { buttonVariants } from "@notra/ui/components/ui/button";
+import { Button } from "@notra/ui/components/ui/button";
 import type { Metadata } from "next";
 import { BrandAssetCard } from "@/components/brand-asset-card";
 import { BrandColorSwatch } from "@/components/brand-color-swatch";
@@ -67,14 +65,17 @@ export default function BrandPage() {
             Official assets and guidelines to help you reference the Notra
             brand, including our logo, colors and typography.
           </div>
-          <a
-            className={buttonVariants({ size: "lg" })}
-            download
-            href={BRAND_ASSETS.zip}
-          >
-            <HugeiconsIcon icon={Download01Icon} />
-            Download brand assets
-          </a>
+          <Button
+            className="corner-squircle h-10 overflow-hidden rounded-[1rem] border-transparent bg-primary px-6 py-2 shadow-[0px_0px_0px_2.5px_rgba(255,255,255,0.08)_inset] hover:bg-primary-hover supports-[corner-shape:round]:rounded-[1.25rem] sm:h-11 sm:px-8 sm:py-1.5 md:h-12 md:px-10 lg:px-12"
+            nativeButton={false}
+            render={
+              <a download href={BRAND_ASSETS.zip}>
+                <span className="flex flex-col justify-center font-medium font-sans text-primary-foreground text-sm leading-5 sm:text-base md:text-[0.9375rem]">
+                  Download brand assets
+                </span>
+              </a>
+            }
+          />
         </div>
       </div>
 
