@@ -21,10 +21,8 @@ import { ButtonGroup } from "@notra/ui/components/ui/button-group";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@notra/ui/components/ui/dropdown-menu";
 import { useSidebar } from "@notra/ui/components/ui/sidebar";
@@ -166,15 +164,6 @@ export default function PageClient({
     ) {
       setImageExportTarget(storedTarget);
     }
-  }, []);
-
-  const handleImageExportTargetChange = useCallback((value: string) => {
-    if (!isImageExportTarget(value) || value === "wonder") {
-      return;
-    }
-
-    setImageExportTarget(value);
-    window.localStorage.setItem(localStorageKeys.imageExportTarget, value);
   }, []);
 
   useEffect(() => {
@@ -739,8 +728,8 @@ export default function PageClient({
     content.contentType === "image" && isHttpImageContent(content.content)
       ? content.content
       : null;
-  const handleCopyImageExport = () => {
-    if (imageExportTarget === "figma") {
+  const copyImageExportFor = (target: ImageExportTarget) => {
+    if (target === "figma") {
       copyImageAsFigma(
         imageExportRef.current,
         title,
@@ -756,6 +745,16 @@ export default function PageClient({
       imageExportHtml,
       imageExportHtmlUrl
     );
+  };
+  const handleCopyImageExport = () => copyImageExportFor(imageExportTarget);
+  const handleImageExportTargetSelect = (value: string) => {
+    if (!isImageExportTarget(value) || value === "wonder") {
+      return;
+    }
+
+    setImageExportTarget(value);
+    window.localStorage.setItem(localStorageKeys.imageExportTarget, value);
+    copyImageExportFor(value);
   };
   const collection = data.collection;
   const backHref = collection
@@ -1010,9 +1009,8 @@ export default function PageClient({
                         />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52">
-                        <DropdownMenuLabel>Copy target</DropdownMenuLabel>
                         <DropdownMenuRadioGroup
-                          onValueChange={handleImageExportTargetChange}
+                          onValueChange={handleImageExportTargetSelect}
                           value={imageExportTarget}
                         >
                           {IMAGE_EXPORT_TARGETS.map((target) => {
@@ -1024,6 +1022,7 @@ export default function PageClient({
                                   "gap-2",
                                   isWonder && "items-start"
                                 )}
+                                closeOnClick
                                 disabled={isWonder}
                                 key={target}
                                 value={target}
@@ -1034,7 +1033,7 @@ export default function PageClient({
                                 />
                                 <span className="flex flex-col">
                                   <span>
-                                    {getImageExportTargetLabel(target)}
+                                    Copy for {getImageExportTargetLabel(target)}
                                   </span>
                                   {isWonder && (
                                     <span className="text-muted-foreground text-xs">
@@ -1046,10 +1045,6 @@ export default function PageClient({
                             );
                           })}
                         </DropdownMenuRadioGroup>
-                        <DropdownMenuSeparator />
-                        <div className="px-1.5 py-1 text-muted-foreground text-xs">
-                          Selection is saved on this device.
-                        </div>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </ButtonGroup>
