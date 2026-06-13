@@ -4,6 +4,7 @@ import { Github } from "@notra/ui/components/ui/svgs/github";
 import { Linkedin } from "@notra/ui/components/ui/svgs/linkedin";
 import { Reddit } from "@notra/ui/components/ui/svgs/reddit";
 import { XTwitter } from "@notra/ui/components/ui/svgs/twitter";
+import { Youtube } from "@notra/ui/components/ui/svgs/youtube";
 import { cn } from "@notra/ui/lib/utils";
 import Link from "next/link";
 import { AI_SUMMARY_LINKS } from "@/utils/ai-summary-links";
@@ -84,6 +85,15 @@ export default function FooterSection() {
               target="_blank"
             >
               <Reddit className="size-5" />
+            </Link>
+            <Link
+              aria-label="Visit Notra on YouTube"
+              className={buttonVariants({ size: "icon", variant: "ghost" })}
+              href={SOCIAL_LINKS.youtube}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+              <Youtube className="size-5" />
             </Link>
           </div>
         </div>
