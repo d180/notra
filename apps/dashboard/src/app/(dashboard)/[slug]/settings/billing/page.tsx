@@ -396,8 +396,8 @@ export default function BillingPage() {
                     <div>
                       <h2 className="font-semibold text-lg">Plans</h2>
                       <p className="text-muted-foreground text-sm">
-                        Upgrade or change your plan. Basic includes a 7 day free
-                        trial
+                        Upgrade or change your plan. Basic includes a 3 day free
+                        trial.
                       </p>
                     </div>
                     <Tabs
