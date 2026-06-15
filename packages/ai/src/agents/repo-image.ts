@@ -303,6 +303,12 @@ export async function generateRepoImage(params: {
       "UPSTASH_BOX_API_KEY is not configured"
     );
   }
+  if (!process.env.AI_GATEWAY_API_KEY) {
+    throw new RepoImageError(
+      "missing_config",
+      "AI_GATEWAY_API_KEY is not configured"
+    );
+  }
 
   const integration = await getGitHubIntegrationById(input.integrationId);
   if (
@@ -352,6 +358,7 @@ export async function generateRepoImage(params: {
       agent: {
         harness: Agent.OpenCode,
         model: IMAGE_GEN_MODEL_ID,
+        apiKey: process.env.AI_GATEWAY_API_KEY,
       },
       timeout: AGENT_TIMEOUT_MS,
     };
