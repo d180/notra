@@ -37,6 +37,7 @@ import {
 } from "@notra/ai/utils/repo-image-skills";
 import { extractRepoImageUsage } from "@notra/ai/utils/repo-image-usage";
 import { withLongFetchTimeouts } from "@notra/ai/utils/undici-dispatcher";
+import type { BoxConfig, Runtime, VercelModel } from "@upstash/box";
 import { Agent, Box } from "@upstash/box";
 import { generateText, Output } from "ai";
 import { z } from "zod";
@@ -297,10 +298,20 @@ export async function generateRepoImage(params: {
 }): Promise<GenerateRepoImageResult> {
   const { input, restoreSnapshotId, snapshotName, userId } = params;
 
-  if (!process.env.UPSTASH_BOX_API_KEY) {
+  const upstashBoxApiKey = process.env.UPSTASH_BOX_API_KEY;
+
+  if (!upstashBoxApiKey) {
     throw new RepoImageError(
       "missing_config",
       "UPSTASH_BOX_API_KEY is not configured"
+    );
+  }
+  const agentApiKey = process.env.AI_GATEWAY_API_KEY;
+
+  if (!agentApiKey) {
+    throw new RepoImageError(
+      "missing_config",
+      "AI_GATEWAY_API_KEY is not configured"
     );
   }
 
@@ -341,9 +352,10 @@ export async function generateRepoImage(params: {
   });
 
   return await withLongFetchTimeouts(async () => {
+    const runtime = "node" satisfies Runtime;
     const boxConfig = {
-      apiKey: process.env.UPSTASH_BOX_API_KEY,
-      runtime: "node" as const,
+      apiKey: upstashBoxApiKey,
+      runtime: runtime as Runtime,
       git: {
         ...(token ? { token } : {}),
         userName: "notra-bot",
@@ -351,10 +363,11 @@ export async function generateRepoImage(params: {
       },
       agent: {
         harness: Agent.OpenCode,
-        model: IMAGE_GEN_MODEL_ID,
+        model: IMAGE_GEN_MODEL_ID as VercelModel,
+        apiKey: agentApiKey,
       },
       timeout: AGENT_TIMEOUT_MS,
-    };
+    } satisfies BoxConfig;
     const box = restoreSnapshotId
       ? await withBoxRetry(() => Box.fromSnapshot(restoreSnapshotId, boxConfig))
       : await withBoxRetry(() => Box.create(boxConfig));
