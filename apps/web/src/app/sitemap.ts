@@ -112,6 +112,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: STATIC_PAGE_LAST_MODIFIED,
     },
     {
+      url: `${SITE_URL}/dpa`,
+      lastModified: STATIC_PAGE_LAST_MODIFIED,
+    },
+    {
       url: `${SITE_URL}/legal`,
       lastModified: STATIC_PAGE_LAST_MODIFIED,
     },

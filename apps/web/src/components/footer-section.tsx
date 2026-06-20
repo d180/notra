@@ -192,6 +192,12 @@ export default function FooterSection() {
               </Link>
               <Link
                 className="font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary"
+                href="/dpa"
+              >
+                Data Processing Addendum
+              </Link>
+              <Link
+                className="font-normal font-sans text-foreground text-sm leading-5 transition-colors hover:text-primary"
                 href="/legal"
               >
                 Legal Notice
