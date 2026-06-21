@@ -1,3 +1,4 @@
+import { DateTime, Option } from "effect";
 import type { LookbackWindow } from "@/schemas/integrations";
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -8,20 +9,53 @@ export interface LookbackRange {
   label: string;
 }
 
-export function resolveLookbackRange(window: LookbackWindow): LookbackRange {
+function zonedNow(now: Date, timeZone: string | undefined) {
+  if (!timeZone) {
+    return null;
+  }
+
+  const zone = DateTime.zoneMakeNamed(timeZone);
+  return Option.isNone(zone)
+    ? null
+    : DateTime.setZone(DateTime.makeUnsafe(now), zone.value);
+}
+
+function startOfUtcDay(date: Date): Date {
+  const start = new Date(date);
+  start.setUTCHours(0, 0, 0, 0);
+  return start;
+}
+
+function startOfZonedDay(zoned: DateTime.Zoned): Date {
+  return new Date(DateTime.toEpochMillis(DateTime.startOf(zoned, "day")));
+}
+
+export function resolveLookbackRange(
+  window: LookbackWindow,
+  timeZone?: string
+): LookbackRange {
   const now = new Date();
+  const zoned = zonedNow(now, timeZone);
+  const zoneLabel = zoned ? timeZone : "UTC";
 
   if (window === "current_day") {
-    const start = new Date(now);
-    start.setUTCHours(0, 0, 0, 0);
-    return { start, end: now, label: "current UTC day" };
+    return {
+      start: zoned ? startOfZonedDay(zoned) : startOfUtcDay(now),
+      end: now,
+      label: `current day (${zoneLabel})`,
+    };
   }
 
   if (window === "yesterday") {
-    const end = new Date(now);
-    end.setUTCHours(0, 0, 0, 0);
-    const start = new Date(end.getTime() - DAY_IN_MS);
-    return { start, end, label: "previous UTC day" };
+    const todayStart = zoned ? startOfZonedDay(zoned) : startOfUtcDay(now);
+    const yesterdayStart = zoned
+      ? startOfZonedDay(DateTime.subtract(zoned, { days: 1 }))
+      : startOfUtcDay(new Date(todayStart.getTime() - 1));
+    return {
+      start: yesterdayStart,
+      end: todayStart,
+      label: `previous day (${zoneLabel})`,
+    };
   }
 
   if (window === "last_14_days") {
@@ -56,18 +90,25 @@ export function resolveLookbackRange(window: LookbackWindow): LookbackRange {
   };
 }
 
-export function formatUtcTodayContext(now: Date): string {
-  const weekdays = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-  ] as const;
-  const weekday = weekdays[now.getUTCDay()];
-  const date = now.toISOString().slice(0, 10);
+export function formatTodayContext(now: Date, timeZone?: string): string {
+  const zoned = zonedNow(now, timeZone);
 
-  return `${weekday}, ${date} (UTC)`;
+  if (!zoned) {
+    const weekday = DateTime.format(DateTime.makeUnsafe(now), {
+      locale: "en-CA",
+      timeZone: "UTC",
+      weekday: "long",
+    });
+    return `${weekday}, ${now.toISOString().slice(0, 10)} (UTC)`;
+  }
+
+  const formatted = DateTime.format(zoned, {
+    locale: "en-CA",
+    weekday: "long",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  return `${formatted} (${timeZone})`;
 }
