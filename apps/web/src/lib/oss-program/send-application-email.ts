@@ -32,13 +32,33 @@ function buildPlainText(application: OssApplicationEmailProps): string {
   ].join("\n");
 }
 
+function buildIdempotencyKey(
+  application: OssApplicationEmailProps,
+  recipient: string
+): string {
+  const hash = createHash("sha256");
+
+  for (const value of [
+    recipient,
+    application.name,
+    application.email,
+    application.projectName,
+    application.repositoryUrl,
+    application.description,
+    application.assetNeeds ?? "",
+  ]) {
+    hash.update(value);
+    hash.update("\0");
+  }
+
+  return `notra:oss-program:${hash.digest("hex")}`;
+}
+
 export const sendOssApplicationEmail = Effect.fn("sendOssApplicationEmail")(
   function* (application: OssApplicationEmailProps) {
     const to = getRecipient();
     const subject = `OSS program application: ${application.projectName}`;
-    const idempotencyKey = `notra:oss-program:${createHash("sha256")
-      .update(`${application.email}:${application.repositoryUrl}`)
-      .digest("hex")}`;
+    const idempotencyKey = buildIdempotencyKey(application, to);
 
     const resend = getResend();
 
