@@ -5,6 +5,8 @@ const REPO_HOST_REGEX = /^https?:\/\/(www\.)?github\.com\/.+/i;
 
 export const DESCRIPTION_MIN_LENGTH = 20;
 const DESCRIPTION_MAX_LENGTH = 1000;
+export const ASSET_NEEDS_MIN_LENGTH = 20;
+const ASSET_NEEDS_MAX_LENGTH = 1000;
 
 export const ossProgramApplicationSchema = z.object({
   name: z
@@ -38,8 +40,14 @@ export const ossProgramApplicationSchema = z.object({
   assetNeeds: z
     .string()
     .trim()
-    .max(1000, "Please keep this under 1000 characters.")
-    .optional(),
+    .min(
+      ASSET_NEEDS_MIN_LENGTH,
+      `Tell us how Notra would help, at least ${ASSET_NEEDS_MIN_LENGTH} characters.`
+    )
+    .max(
+      ASSET_NEEDS_MAX_LENGTH,
+      `Please keep this under ${ASSET_NEEDS_MAX_LENGTH} characters.`
+    ),
   isMaintainer: z.literal(true, {
     error: "You must be an owner or maintainer to apply.",
   }),

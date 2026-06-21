@@ -28,7 +28,7 @@ function buildPlainText(application: OssApplicationEmailProps): string {
     `Repository: ${application.repositoryUrl}`,
     "",
     application.description,
-    application.assetNeeds ? `\nAsset needs:\n${application.assetNeeds}` : "",
+    `\nAsset needs:\n${application.assetNeeds}`,
   ].join("\n");
 }
 
@@ -45,7 +45,7 @@ function buildIdempotencyKey(
     application.projectName,
     application.repositoryUrl,
     application.description,
-    application.assetNeeds ?? "",
+    application.assetNeeds,
   ]) {
     hash.update(value);
     hash.update("\0");

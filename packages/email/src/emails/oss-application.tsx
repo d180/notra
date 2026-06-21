@@ -22,7 +22,7 @@ export const OssApplicationEmail = ({
   projectName = "Linux",
   repositoryUrl = "https://github.com/torvalds/linux",
   description = "A free and open source operating system kernel used by everything from phones to supercomputers.",
-  assetNeeds,
+  assetNeeds = "We need help turning releases into clear changelogs, launch posts, and social updates so new contributors can understand what's shipping.",
 }: OssApplicationEmailProps) => {
   const logoUrl = EMAIL_CONFIG.getLogoUrl();
 
@@ -87,16 +87,14 @@ export const OssApplicationEmail = ({
               </Text>
             </Section>
 
-            {assetNeeds ? (
-              <Section className="mt-4">
-                <Text className="m-0 text-[#666666] text-[12px] uppercase tracking-wide">
-                  Asset needs
-                </Text>
-                <Text className="mt-1 mb-0 whitespace-pre-wrap text-[14px] text-black leading-[22px]">
-                  {assetNeeds}
-                </Text>
-              </Section>
-            ) : null}
+            <Section className="mt-4">
+              <Text className="m-0 text-[#666666] text-[12px] uppercase tracking-wide">
+                Asset needs
+              </Text>
+              <Text className="mt-1 mb-0 whitespace-pre-wrap text-[14px] text-black leading-[22px]">
+                {assetNeeds}
+              </Text>
+            </Section>
 
             <Section className="mt-4">
               <Text className="m-0 text-[#666666] text-[12px] leading-[18px]">

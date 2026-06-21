@@ -4,5 +4,5 @@ export interface OssApplicationEmailProps {
   projectName: string;
   repositoryUrl: string;
   description: string;
-  assetNeeds?: string;
+  assetNeeds: string;
 }

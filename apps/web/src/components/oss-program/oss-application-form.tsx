@@ -13,6 +13,7 @@ import {
   extractRepoSlug,
 } from "@/lib/oss-program/repository-url";
 import {
+  ASSET_NEEDS_MIN_LENGTH,
   DESCRIPTION_MIN_LENGTH,
   ossProgramApplicationSchema,
 } from "@/schemas/oss-program";
@@ -142,6 +143,7 @@ export function OssApplicationForm() {
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
                 placeholder="Linus Torvalds"
+                required
                 value={field.state.value}
               />
               {field.state.meta.errors.length > 0 ? (
@@ -172,6 +174,7 @@ export function OssApplicationForm() {
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
                 placeholder="torvalds@kernel.org"
+                required
                 type="email"
                 value={field.state.value}
               />
@@ -202,6 +205,7 @@ export function OssApplicationForm() {
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
                 placeholder="Linux"
+                required
                 value={field.state.value}
               />
               {field.state.meta.errors.length > 0 ? (
@@ -251,6 +255,7 @@ export function OssApplicationForm() {
                       field.handleChange(buildRepositoryUrl(event.target.value))
                     }
                     placeholder="torvalds/linux"
+                    required
                     value={extractRepoSlug(field.state.value)}
                   />
                 </div>
@@ -290,6 +295,7 @@ export function OssApplicationForm() {
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.value)}
                 placeholder="Tell us about your project, who it's for, and what makes it interesting."
+                required
                 value={field.state.value}
               />
               <div className="flex items-center justify-between gap-3">
@@ -317,29 +323,41 @@ export function OssApplicationForm() {
               ?.issues[0]?.message,
         }}
       >
-        {(field) => (
-          <div className="flex flex-col gap-2">
-            <Label className={labelClass} htmlFor={field.name}>
-              How would content &amp; marketing assets help?{" "}
-              <span className="font-normal text-muted-foreground">
-                (optional)
-              </span>
-            </Label>
-            <Textarea
-              aria-invalid={field.state.meta.errors.length > 0}
-              className="min-h-24"
-              id={field.name}
-              name={field.name}
-              onBlur={field.handleBlur}
-              onChange={(event) => field.handleChange(event.target.value)}
-              placeholder="Changelogs, launch posts, social updates, docs. What would move the needle for your project?"
-              value={field.state.value}
-            />
-            {field.state.meta.errors.length > 0 ? (
-              <p className={fieldErrorClass}>{field.state.meta.errors[0]}</p>
-            ) : null}
-          </div>
-        )}
+        {(field) => {
+          const trimmedLength = field.state.value.trim().length;
+          const charsRemaining = ASSET_NEEDS_MIN_LENGTH - trimmedLength;
+
+          return (
+            <div className="flex flex-col gap-2">
+              <Label className={labelClass} htmlFor={field.name}>
+                How would content &amp; marketing assets help?
+              </Label>
+              <Textarea
+                aria-invalid={field.state.meta.errors.length > 0}
+                className="min-h-24"
+                id={field.name}
+                name={field.name}
+                onBlur={field.handleBlur}
+                onChange={(event) => field.handleChange(event.target.value)}
+                placeholder="Changelogs, launch posts, social updates, docs. What would move the needle for your project?"
+                required
+                value={field.state.value}
+              />
+              <div className="flex items-center justify-between gap-3">
+                {field.state.meta.errors.length > 0 ? (
+                  <p className={fieldErrorClass}>
+                    {field.state.meta.errors[0]}
+                  </p>
+                ) : null}
+                <span className="ml-auto shrink-0 font-sans text-muted-foreground text-xs">
+                  {charsRemaining > 0
+                    ? `${charsRemaining} more character${charsRemaining === 1 ? "" : "s"} needed`
+                    : `${trimmedLength} characters`}
+                </span>
+              </div>
+            </div>
+          );
+        }}
       </form.Field>
 
       <form.Field
@@ -367,6 +385,7 @@ export function OssApplicationForm() {
                 name={field.name}
                 onBlur={field.handleBlur}
                 onChange={(event) => field.handleChange(event.target.checked)}
+                required
                 type="checkbox"
               />
               <span className="font-normal font-sans text-foreground text-sm leading-5">
