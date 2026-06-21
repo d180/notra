@@ -43,11 +43,6 @@ const LEGAL_PAGES = [
     filename: "terms.mdx",
   },
   {
-    pattern: "/dpa",
-    title: "Data Processing Addendum",
-    filename: "dpa.mdx",
-  },
-  {
     pattern: "/legal",
     title: "Legal Notice",
     filename: "legal.mdx",
