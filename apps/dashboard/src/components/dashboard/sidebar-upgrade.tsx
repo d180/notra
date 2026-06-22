@@ -84,14 +84,15 @@ export function SidebarUpgrade() {
         await refetch();
       }
     } catch (err) {
+      setLoading(false);
       toast.error(
         err instanceof Error
           ? err.message
           : "Could not update billing. Please try again."
       );
-    } finally {
-      setLoading(false);
+      return;
     }
+    setLoading(false);
   }
 
   return (

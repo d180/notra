@@ -21,23 +21,24 @@ import {
   TooltipTrigger,
 } from "@notra/ui/components/ui/tooltip";
 import { Loader2Icon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/button";
 import { LinkedInPost } from "@/components/linkedin-post";
 import { LINKEDIN_BRAND_PRIMARY } from "@/constants/linkedin";
+import type {
+  PreviewEffectiveState,
+  PreviewIncomingState,
+} from "@/types/content/ai-preview";
 import {
   copyLinkedInPostForPublishing,
   createLinkedInPostUrl,
 } from "@/utils/linkedin";
 import { getOutputTypeLabel, OutputTypeIcon } from "@/utils/output-types";
-
-type IncomingState = "draft" | "finished";
-type EffectiveState = "draft" | "loading" | "finished";
-type UserAction = "none" | "saving" | "generating" | "save-failed";
+import { socialPreviewReducer } from "@/utils/social-preview-reducer";
 
 interface LinkedInPreviewProps {
-  state: IncomingState;
+  state: PreviewIncomingState;
   title: string;
   markdown: string;
   organization?: {
@@ -68,17 +69,28 @@ export function LinkedInPreview({
   onPersist,
   onRegenerate,
 }: LinkedInPreviewProps) {
-  const [userAction, setUserAction] = useState<UserAction>("none");
-  const [draftMarkdown, setDraftMarkdown] = useState(markdown);
-  const [regenerateOpen, setRegenerateOpen] = useState(false);
-  const [regenerateInstructions, setRegenerateInstructions] = useState("");
-  const [isOpen, setIsOpen] = useState(incomingState !== "finished");
+  const [
+    {
+      userAction,
+      draftMarkdown,
+      regenerateOpen,
+      regenerateInstructions,
+      isOpen,
+    },
+    dispatch,
+  ] = useReducer(socialPreviewReducer, {
+    userAction: "none",
+    draftMarkdown: markdown,
+    regenerateOpen: false,
+    regenerateInstructions: "",
+    isOpen: incomingState !== "finished",
+  });
 
   useEffect(() => {
-    setDraftMarkdown(markdown);
+    dispatch({ type: "draftMarkdownChanged", draftMarkdown: markdown });
   }, [markdown]);
 
-  const effectiveState: EffectiveState = (() => {
+  const effectiveState: PreviewEffectiveState = (() => {
     if (incomingState === "finished") {
       return "finished";
     }
@@ -96,14 +108,14 @@ export function LinkedInPreview({
       return;
     }
     const timer = window.setTimeout(() => {
-      setUserAction("save-failed");
+      dispatch({ type: "userActionChanged", userAction: "save-failed" });
     }, CHAT_PREVIEW_SAVE_TIMEOUT_MS);
     return () => window.clearTimeout(timer);
   }, [userAction]);
 
   const handleApprove = useCallback(async () => {
-    setUserAction("saving");
-    setIsOpen(false);
+    dispatch({ type: "userActionChanged", userAction: "saving" });
+    dispatch({ type: "openChanged", open: false });
     const toastId = toast.loading("Saving draft...");
     try {
       if (onPersist) {
@@ -114,10 +126,10 @@ export function LinkedInPreview({
       } else {
         onApprove?.();
       }
-      setUserAction("none");
+      dispatch({ type: "userActionChanged", userAction: "none" });
       toast.success("Saved as draft", { id: toastId });
     } catch {
-      setUserAction("save-failed");
+      dispatch({ type: "userActionChanged", userAction: "save-failed" });
       toast.error("Failed to save draft", { id: toastId });
     }
   }, [draftMarkdown, onApprove, onPersist, title]);
@@ -130,10 +142,10 @@ export function LinkedInPreview({
   const handleRegenerate = useCallback(() => {
     const instructions = regenerateInstructions.trim();
     if (!instructions) {
-      setRegenerateOpen(true);
+      dispatch({ type: "regenerateOpenChanged", open: true });
       return;
     }
-    setUserAction("generating");
+    dispatch({ type: "userActionChanged", userAction: "generating" });
     toast("Generating post...");
     onRegenerate?.(instructions, {
       title,
@@ -149,7 +161,10 @@ export function LinkedInPreview({
   const showStatusBadge = isFinished && userAction !== "save-failed";
 
   return (
-    <Collapsible onOpenChange={setIsOpen} open={isOpen}>
+    <Collapsible
+      onOpenChange={(open) => dispatch({ type: "openChanged", open })}
+      open={isOpen}
+    >
       <div className="ml-px max-w-md">
         <div className="rounded-lg border border-border bg-muted/80">
           <CollapsibleTrigger className="flex w-full items-center gap-2 px-3 py-2 [&[data-panel-open]>svg]:rotate-90">
@@ -188,7 +203,13 @@ export function LinkedInPreview({
                   content={draftMarkdown}
                   defaultExpanded
                   onContentChange={
-                    isFinished ? undefined : (value) => setDraftMarkdown(value)
+                    isFinished
+                      ? undefined
+                      : (value) =>
+                          dispatch({
+                            type: "draftMarkdownChanged",
+                            draftMarkdown: value,
+                          })
                   }
                   timestamp="Just now"
                   truncate={false}
@@ -199,7 +220,10 @@ export function LinkedInPreview({
                   autoFocus
                   className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onChange={(event) =>
-                    setRegenerateInstructions(event.target.value)
+                    dispatch({
+                      type: "regenerateInstructionsChanged",
+                      instructions: event.target.value,
+                    })
                   }
                   onKeyDown={(event) => {
                     if (event.key === "Enter") {
@@ -228,7 +252,9 @@ export function LinkedInPreview({
                       render={
                         <Button
                           aria-label="Regenerate"
-                          onClick={() => setRegenerateOpen((open) => !open)}
+                          onClick={() =>
+                            dispatch({ type: "regenerateOpenToggled" })
+                          }
                           size="icon-sm"
                           variant="ghost"
                         />
