@@ -53,11 +53,12 @@ const DEFAULT_STANDALONE_TOOL_NAMES = [
   "listAvailableSkills",
   "getSkillByName",
   "getAvailableIntegrations",
+  "fetchWebpage",
   "webSearch",
 ] as const;
 
 const NOTRA_TOOLING_DESCRIPTION =
-  "Notra app tools are available through lazy discovery. Use searchNotraTools to find built-in content, brand, GitHub, Linear, and post tools by intent, then activateNotraTools before calling them. Basic skills, integration discovery, and web search tools are available by default when configured.";
+  "Notra app tools are available through lazy discovery. Use searchNotraTools to find built-in content, brand, GitHub, Linear, and post tools by intent, then activateNotraTools before calling them. Basic skills, integration discovery, web search, and webpage fetch tools are exposed by default. Context.dev tools require API configuration when called.";
 const WHITESPACE_REGEX = /\s+/;
 const LEGACY_NOTRA_TOOL_ALIASES: Record<string, string> = {
   getBrandReferences: "getAvailableBrandReferences",
@@ -314,7 +315,7 @@ function createStandaloneToolProvisioningRuntime({
   const managerToolNameSet = new Set<string>(NOTRA_MANAGER_TOOL_NAMES);
   const defaultToolNameSet = new Set(defaultActiveToolNames);
   const provisionableToolNames = Object.keys(tools).filter(
-    (name) => !(managerToolNameSet.has(name) || defaultToolNameSet.has(name))
+    (name) => !managerToolNameSet.has(name)
   );
   const getActiveToolNames = () =>
     Array.from(activeToolNames).filter(

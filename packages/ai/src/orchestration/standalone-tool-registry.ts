@@ -27,7 +27,12 @@ import {
 } from "@notra/ai/tools/post";
 import { getSkillByName, listAvailableSkills } from "@notra/ai/tools/skills";
 import {
+  createFetchWebpageTool,
+  createUnavailableFetchWebpageTool,
+  createUnavailableWebSearchTool,
   createWebSearchTool,
+  FETCH_WEBPAGE_TOOL_DESCRIPTION,
+  FETCH_WEBPAGE_TOOL_NAME,
   isWebSearchAvailable,
   WEB_SEARCH_TOOL_DESCRIPTION,
   WEB_SEARCH_TOOL_NAME,
@@ -111,10 +116,15 @@ export function buildStandaloneToolSet(
   descriptions.push(
     "**Skills**: Access knowledge and writing guidelines using listAvailableSkills and getSkillByName"
   );
-  if (isWebSearchAvailable()) {
-    tools[WEB_SEARCH_TOOL_NAME] = createWebSearchTool();
-    descriptions.push(WEB_SEARCH_TOOL_DESCRIPTION);
-  }
+  const hasContextDev = isWebSearchAvailable();
+  tools[FETCH_WEBPAGE_TOOL_NAME] = hasContextDev
+    ? createFetchWebpageTool()
+    : createUnavailableFetchWebpageTool();
+  tools[WEB_SEARCH_TOOL_NAME] = hasContextDev
+    ? createWebSearchTool()
+    : createUnavailableWebSearchTool();
+  descriptions.push(FETCH_WEBPAGE_TOOL_DESCRIPTION);
+  descriptions.push(WEB_SEARCH_TOOL_DESCRIPTION);
 
   if (process.env.NODE_ENV === "development") {
     tools.example = exampleTool();

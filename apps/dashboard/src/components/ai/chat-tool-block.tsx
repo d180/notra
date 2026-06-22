@@ -16,7 +16,7 @@ import {
 } from "@notra/ui/components/ui/collapsible";
 import { cn } from "@notra/ui/lib/utils";
 import { CheckIcon, XIcon } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   commitsByTimeframeInputSchema,
   type MemoryToolInput,
@@ -430,6 +430,11 @@ const TOOL_COPY: Record<string, ToolCopy> = {
     noun: "skill",
     suffix: (input) => quotedSuffix(input, ["name"]),
   },
+  fetchWebpage: {
+    verbs: ["Fetching", "Fetched"],
+    noun: "webpage",
+    suffix: (input) => quotedSuffix(input, ["url"]),
+  },
   webSearch: {
     verbs: ["Searching", "Searched"],
     noun: "web",
@@ -654,16 +659,11 @@ export function ChatToolBlock({
   toolMetadata,
 }: ChatToolBlockProps) {
   const isAwaitingApproval = state === "approval-requested";
-  const [isOpen, setIsOpen] = useState(isAwaitingApproval);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const isOpen = isAwaitingApproval || isDetailsOpen;
   const isError = state === "output-error";
   const isStreaming =
     state === "input-streaming" || state === "input-available";
-
-  useEffect(() => {
-    if (isAwaitingApproval) {
-      setIsOpen(true);
-    }
-  }, [isAwaitingApproval]);
 
   const subtitle = getSubtitle({
     toolName,
@@ -699,7 +699,7 @@ export function ChatToolBlock({
   }
 
   return (
-    <Collapsible onOpenChange={setIsOpen} open={isOpen}>
+    <Collapsible onOpenChange={setIsDetailsOpen} open={isOpen}>
       <CollapsibleTrigger
         className="group flex w-full min-w-0 items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground disabled:cursor-default disabled:hover:text-muted-foreground"
         disabled={!hasDetails}
