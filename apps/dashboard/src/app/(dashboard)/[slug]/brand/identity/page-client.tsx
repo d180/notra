@@ -32,6 +32,11 @@ import { Button } from "@/components/button";
 import { PageContainer } from "@/components/layout/container";
 import { useOrganizationsContext } from "@/components/providers/organization-provider";
 import { getValidLanguage } from "@/schemas/brand";
+import {
+  findSelectedBrandIdentity,
+  readStoredBrandIdentityId,
+  writeStoredBrandIdentityId,
+} from "@/utils/brand-identity-selection";
 import { formatRelativeTime } from "@/utils/format";
 import {
   useAnalyzeBrand,
@@ -106,6 +111,22 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
     "view",
     parseAsStringLiteral(TAB_VALUES).withDefault("identity")
   );
+  const [newIdentityParam, setNewIdentityParam] = useQueryState("new");
+  const isAddIdentityOpen = addIdentityOpen || Boolean(newIdentityParam);
+  const [storedVoiceId, setStoredVoiceId] = useState<string | null>(null);
+
+  const handleAddIdentityOpenChange = (open: boolean) => {
+    setAddIdentityOpen(open);
+    if (!open && newIdentityParam) {
+      setNewIdentityParam(null);
+    }
+  };
+
+  useEffect(() => {
+    if (organizationId) {
+      setStoredVoiceId(readStoredBrandIdentityId(organizationId));
+    }
+  }, [organizationId]);
 
   useHotkey(
     "C",
@@ -116,13 +137,20 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
         setAddReferenceOpen(true);
       }
     },
-    { enabled: !(addIdentityOpen || addReferenceOpen) }
+    { enabled: !(isAddIdentityOpen || addReferenceOpen) }
   );
 
-  const selectedVoice =
-    voices.find((v) => v.id === activeVoiceId) ??
-    voices.find((v) => v.isDefault) ??
-    voices[0];
+  const selectedVoice = findSelectedBrandIdentity(
+    voices,
+    activeVoiceId,
+    storedVoiceId
+  );
+
+  const handleSelectVoice = (voiceId: string) => {
+    writeStoredBrandIdentityId(organizationId, voiceId);
+    setStoredVoiceId(voiceId);
+    setActiveVoiceId(voiceId);
+  };
 
   const deleteTargetVoice = deleteTargetVoiceId
     ? voices.find((v) => v.id === deleteTargetVoiceId)
@@ -377,7 +405,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <h1 className="font-bold text-3xl tracking-tight">
-              {activeTab === "identity" ? "Brand Identity" : "References"}
+              {activeTab === "identity" ? "Company Info" : "References"}
             </h1>
             <p className="text-muted-foreground">
               {activeTab === "identity"
@@ -423,16 +451,16 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
           }}
           onReanalyze={handleReanalyze}
           onRequestDelete={setDeleteTargetVoiceId}
-          onSelect={setActiveVoiceId}
+          onSelect={handleSelectVoice}
           onSetDefault={handleSetDefault}
           organizationId={organizationId}
           voices={voices}
         />
 
         <AddIdentityDialog
-          onCreated={(voice) => setActiveVoiceId(voice.id)}
-          onOpenChange={setAddIdentityOpen}
-          open={addIdentityOpen}
+          onCreated={(voice) => handleSelectVoice(voice.id)}
+          onOpenChange={handleAddIdentityOpenChange}
+          open={isAddIdentityOpen}
           organizationId={organizationId}
           startPolling={startPolling}
         />
@@ -463,7 +491,7 @@ export default function PageClient({ organizationSlug }: PageClientProps) {
         >
           <div className="flex items-center justify-between">
             <TabsList variant="line">
-              <TabsTrigger value="identity">Identity</TabsTrigger>
+              <TabsTrigger value="identity">Company Info</TabsTrigger>
               <TabsTrigger value="references">
                 References
                 {referenceCount > 0 && (
