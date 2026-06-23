@@ -94,6 +94,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: STATIC_PAGE_LAST_MODIFIED,
     },
     {
+      url: `${SITE_URL}/features/marketing/assets`,
+      lastModified: STATIC_PAGE_LAST_MODIFIED,
+    },
+    {
       url: `${SITE_URL}/pricing`,
       lastModified: STATIC_PAGE_LAST_MODIFIED,
     },
