@@ -104,7 +104,8 @@ export default function HtmlExportTool({ target }: HtmlExportToolProps) {
       )}
 
       <p className="font-mono text-muted-foreground text-xs">
-        Runs in your browser. Nothing is uploaded.
+        Runs in your browser. Nothing is uploaded. Not affiliated with{" "}
+        {copy.productName}.
       </p>
     </div>
   );
