@@ -1,6 +1,6 @@
 import { Tracker } from "@bydefault/vercel";
 import { createDualmarkMiddleware } from "@dualmark/nextjs";
-import { after, type NextRequest } from "next/server";
+import { after, type NextRequest, NextResponse } from "next/server";
 import { HOMEPAGE_LINK_HEADER, SITE_URL } from "@/utils/urls";
 
 const tracker = new Tracker({
@@ -44,6 +44,19 @@ function appendLinkHeader(headers: Headers, value: string) {
 }
 
 export async function proxy(request: NextRequest) {
+  if (
+    request.nextUrl.pathname === "/" &&
+    request.nextUrl.searchParams.get("mode") === "agent"
+  ) {
+    const response = NextResponse.rewrite(new URL("/agent", request.url));
+
+    after(async () => {
+      await tracker.track(request);
+    });
+
+    return response;
+  }
+
   const response = await dualmarkProxy(request);
 
   after(async () => {
