@@ -3,10 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { AiBrain01Icon, ArrowDown01Icon, X } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  chatErrorPayloadSchema,
-  chatTransportRequestInputSchema,
-} from "@notra/ai/schemas/chat";
+import { chatTransportRequestInputSchema } from "@notra/ai/schemas/chat";
 import type { ContentType } from "@notra/ai/schemas/content";
 import type {
   ChatAttachment,
@@ -77,6 +74,7 @@ import type {
   CreateToolContentType,
   StandaloneChatPageClientProps,
 } from "@/types/components/chat-page";
+import { handleStandaloneChatError } from "@/utils/chat-error";
 import {
   CHAT_PREFERENCES_STORAGE_KEY,
   DEFAULT_CHAT_PREFERENCES,
@@ -130,50 +128,62 @@ function ChatReasoningBlock({
   children: string;
   isStreaming: boolean;
 }) {
-  const [isOpen, setIsOpen] = useState(isStreaming);
-  const [statusLabel, setStatusLabel] = useState(
-    isStreaming ? THINKING_LABEL : formatReasoningDurationLabel(null)
-  );
-  const [durationSeconds, setDurationSeconds] = useState<number | null>(null);
+  const [reasoningState, setReasoningState] = useState<{
+    durationSeconds: number | null;
+    isOpen: boolean;
+    wasStreaming: boolean | null;
+  }>({
+    durationSeconds: null,
+    isOpen: false,
+    wasStreaming: null,
+  });
   const startTimeRef = useRef<number | null>(null);
+
+  if (reasoningState.wasStreaming !== isStreaming) {
+    setReasoningState({
+      durationSeconds: isStreaming ? null : reasoningState.durationSeconds,
+      isOpen: isStreaming ? true : reasoningState.isOpen,
+      wasStreaming: isStreaming,
+    });
+  }
 
   useEffect(() => {
     if (isStreaming) {
       startTimeRef.current = Date.now();
-      setDurationSeconds(null);
-      setStatusLabel(THINKING_LABEL);
-      setIsOpen(true);
-
       return;
     }
 
-    const startedAt = startTimeRef.current;
-    const nextDurationSeconds = startedAt
-      ? Math.max(1, Math.ceil((Date.now() - startedAt) / 1000))
-      : null;
+    const durationTimer = window.setTimeout(() => {
+      const startedAt = startTimeRef.current;
 
-    setDurationSeconds(nextDurationSeconds);
-    setStatusLabel(formatReasoningDurationLabel(nextDurationSeconds));
+      setReasoningState((current) => ({
+        ...current,
+        durationSeconds: startedAt
+          ? Math.max(1, Math.ceil((Date.now() - startedAt) / 1000))
+          : null,
+      }));
+    }, 0);
 
     const closeTimer = window.setTimeout(() => {
-      setIsOpen(false);
+      setReasoningState((current) => ({ ...current, isOpen: false }));
     }, REASONING_AUTO_CLOSE_DELAY_MS);
 
     return () => {
+      window.clearTimeout(durationTimer);
       window.clearTimeout(closeTimer);
     };
   }, [isStreaming]);
 
-  useEffect(() => {
-    if (isStreaming || durationSeconds !== null) {
-      return;
-    }
+  const statusLabel = isStreaming
+    ? THINKING_LABEL
+    : formatReasoningDurationLabel(reasoningState.durationSeconds);
 
-    setStatusLabel(formatReasoningDurationLabel(null));
-  }, [durationSeconds, isStreaming]);
+  function handleOpenChange(isOpen: boolean) {
+    setReasoningState((current) => ({ ...current, isOpen }));
+  }
 
   return (
-    <Collapsible onOpenChange={setIsOpen} open={isOpen}>
+    <Collapsible onOpenChange={handleOpenChange} open={reasoningState.isOpen}>
       <CollapsibleTrigger className="flex w-full items-center gap-2 text-muted-foreground text-sm transition-colors hover:text-foreground">
         {isStreaming ? (
           <Loader2Icon className="size-4 animate-spin" />
@@ -182,7 +192,7 @@ function ChatReasoningBlock({
         )}
         <span>{statusLabel}</span>
         <HugeiconsIcon
-          className={`size-4 transition-transform ${isOpen ? "rotate-180" : "rotate-0"}`}
+          className={`size-4 transition-transform ${reasoningState.isOpen ? "rotate-180" : "rotate-0"}`}
           icon={ArrowDown01Icon}
         />
       </CollapsibleTrigger>
@@ -488,39 +498,6 @@ function StandaloneChatPageClient({
     [organizationId]
   );
 
-  const handleChatError = useCallback((err: Error) => {
-    const errorMessage = err.message || String(err);
-
-    try {
-      const parsed = chatErrorPayloadSchema.safeParse(JSON.parse(errorMessage));
-
-      if (parsed.success && parsed.data.error) {
-        setChatError(parsed.data.error);
-      }
-
-      if (parsed.success && parsed.data.code === "USAGE_LIMIT_REACHED") {
-        setChatError(
-          "You've used all your chat messages this month. Upgrade for more."
-        );
-        return;
-      }
-    } catch {
-      // Ignore non-JSON error payloads.
-    }
-
-    if (
-      errorMessage.includes("USAGE_LIMIT_REACHED") ||
-      errorMessage.includes("Usage limit reached")
-    ) {
-      setChatError(
-        "You've used all your chat messages this month. Upgrade for more."
-      );
-      return;
-    }
-    console.error("Standalone chat error:", err);
-    setPendingMessageId(null);
-  }, []);
-
   const [wasStoppedByUser, setWasStoppedByUser] = useState(false);
   const wasStoppedByUserRef = useRef(wasStoppedByUser);
   wasStoppedByUserRef.current = wasStoppedByUser;
@@ -562,7 +539,8 @@ function StandaloneChatPageClient({
     transport,
     sendAutomaticallyWhen: shouldContinueAfterApprovalResponse,
     onFinish: handleFinish,
-    onError: handleChatError,
+    onError: (err) =>
+      handleStandaloneChatError(err, { setChatError, setPendingMessageId }),
   });
 
   const [isStopping, setIsStopping] = useState(false);
@@ -1891,22 +1869,33 @@ function StandaloneChatPageClient({
   }
 
   const lastMessage = messages.at(-1);
+  const lastAssistantHasNoVisibleContent =
+    lastMessage?.role === "assistant" &&
+    !lastMessage.parts.some(
+      (p) =>
+        (p.type === "text" && p.text.trim()) ||
+        p.type === "file" ||
+        p.type === "reasoning" ||
+        isToolUIPart(p)
+    );
+  const lastPart = lastMessage?.parts.at(-1);
+  const isAwaitingAssistantContinuation =
+    lastMessage?.role === "assistant" &&
+    lastPart != null &&
+    (lastPart.type === "step-start" ||
+      (isToolUIPart(lastPart) &&
+        (isTerminalToolState(lastPart.state) ||
+          lastPart.state === "approval-responded")));
   const showThinkingIndicator =
     isLoading &&
     lastMessage != null &&
     (lastMessage.role === "user" ||
-      (lastMessage.role === "assistant" &&
-        !lastMessage.parts.some(
-          (p) =>
-            (p.type === "text" && p.text.trim()) ||
-            p.type === "file" ||
-            p.type === "reasoning" ||
-            isToolUIPart(p)
-        )));
+      lastAssistantHasNoVisibleContent ||
+      isAwaitingAssistantContinuation);
   const thinkingIndicatorLabel =
-    lastMessage?.role === "user" ? "Getting Started" : "Thinking";
+    lastMessage?.role === "user" ? "Getting Started" : "Working";
   const visibleMessages =
-    showThinkingIndicator && lastMessage?.role === "assistant"
+    showThinkingIndicator && lastAssistantHasNoVisibleContent
       ? messages.slice(0, -1)
       : messages;
 
