@@ -22,15 +22,15 @@ import { useForm } from "@tanstack/react-form";
 import { useAsyncDebouncer } from "@tanstack/react-pacer";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useUpdateBrandSettings } from "../../../../../../lib/hooks/use-brand-analysis";
-import { normalizePublicWebsiteUrl } from "../../../../../../schemas/url";
 import {
   AUTO_SAVE_DELAY,
   LANGUAGE_OPTIONS,
   TONE_OPTIONS,
-} from "../constants/brand-identity";
-import type { BrandFormProps } from "../types/brand-identity";
-import { getLanguageFlag } from "../utils/brand-identity";
+} from "@/constants/brand-identity";
+import type { BrandFormProps } from "@/types/brand-identity";
+import { getLanguageFlag } from "@/utils/brand-identity";
+import { useUpdateBrandSettings } from "../../../../../../lib/hooks/use-brand-analysis";
+import { normalizePublicWebsiteUrl } from "../../../../../../schemas/url";
 
 export function BrandForm({
   organizationId,
@@ -97,8 +97,10 @@ export function BrandForm({
   });
 
   useEffect(() => {
+    const handleSavingChange = onSavingChange;
+
     return () => {
-      onSavingChange?.(false);
+      handleSavingChange?.(false);
     };
   }, [onSavingChange]);
 
