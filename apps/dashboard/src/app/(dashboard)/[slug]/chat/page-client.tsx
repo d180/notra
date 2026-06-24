@@ -83,6 +83,7 @@ import {
   readStoredChatPreferences,
   writeStoredChatPreferences,
 } from "@/utils/chat-preferences";
+import { updateWasStoppedByUser } from "@/utils/chat-state";
 import { formatLongDate, getGreeting } from "@/utils/dashboard-greeting";
 import { getOutputTypeLabel } from "@/utils/output-types";
 
@@ -499,8 +500,7 @@ function StandaloneChatPageClient({
   );
 
   const [wasStoppedByUser, setWasStoppedByUser] = useState(false);
-  const wasStoppedByUserRef = useRef(wasStoppedByUser);
-  wasStoppedByUserRef.current = wasStoppedByUser;
+  const wasStoppedByUserRef = useRef(false);
 
   const drainQueueRef = useRef<() => void>(() => {
     // Populated after dispatchMessage is defined below.
@@ -635,7 +635,7 @@ function StandaloneChatPageClient({
 
   const handleStop = useCallback(async () => {
     setIsStopping(true);
-    setWasStoppedByUser(true);
+    updateWasStoppedByUser(true, wasStoppedByUserRef, setWasStoppedByUser);
     await stopActiveResponse();
   }, [stopActiveResponse]);
 
@@ -721,7 +721,11 @@ function StandaloneChatPageClient({
         }
       }
     }
-    setWasStoppedByUser(Boolean(chatHistoryQuery.data.lastResponseStopped));
+    updateWasStoppedByUser(
+      Boolean(chatHistoryQuery.data.lastResponseStopped),
+      wasStoppedByUserRef,
+      setWasStoppedByUser
+    );
     if (chatHistoryQuery.data.activeStreamId) {
       setPendingMessageId(chatHistoryQuery.data.activeStreamId);
     } else {
@@ -747,7 +751,7 @@ function StandaloneChatPageClient({
     }
 
     hasUpdatedUrlRef.current = false;
-    setWasStoppedByUser(false);
+    updateWasStoppedByUser(false, wasStoppedByUserRef, setWasStoppedByUser);
     setMessages([]);
     setContext([]);
     setHasCustomizedContext(false);
@@ -1000,7 +1004,7 @@ function StandaloneChatPageClient({
       }
 
       setMessages(truncated);
-      setWasStoppedByUser(false);
+      updateWasStoppedByUser(false, wasStoppedByUserRef, setWasStoppedByUser);
       setChatError(null);
       if (attachments.length > 0) {
         const parts: ChatMessagePart[] = [];
@@ -1098,7 +1102,7 @@ function StandaloneChatPageClient({
       if (messagesRef.current.length === 0) {
         triggerFirstMessageTransition();
       }
-      setWasStoppedByUser(false);
+      updateWasStoppedByUser(false, wasStoppedByUserRef, setWasStoppedByUser);
       for (const message of messagesRef.current) {
         if (message.role !== "assistant") {
           continue;
@@ -1213,7 +1217,7 @@ function StandaloneChatPageClient({
       setChatError(null);
       setQueuedMessages([]);
       hasUpdatedUrlRef.current = false;
-      setWasStoppedByUser(false);
+      updateWasStoppedByUser(false, wasStoppedByUserRef, setWasStoppedByUser);
       setMessages([]);
       setContext([]);
       setHasCustomizedContext(false);
