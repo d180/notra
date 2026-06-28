@@ -3,8 +3,11 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button, buttonVariants } from "@/components/button";
-import { getLastActiveOrganization, getSession } from "@/lib/auth/actions";
+import { OAuthClientLogo } from "@/components/oauth/oauth-client-logo";
+import { getConsentOrganizations, getSession } from "@/lib/auth/actions";
 import { auth } from "@/lib/auth/server";
+import { resolveOAuthClientBrandId } from "@/lib/oauth/clients";
+import { buildScopeGroups } from "@/lib/oauth/scopes";
 import { oauthSignedAuthorizeQuerySchema } from "@/schemas/oauth";
 import {
   buildOAuthConsentPath,
@@ -13,6 +16,8 @@ import {
   hasSignedOAuthQuery,
 } from "@/utils/oauth";
 import { OAuthQueryInput } from "./oauth-query-input";
+import { OAuthOrgSelector } from "./org-selector";
+import { OAuthScopeSelector } from "./scope-selector";
 
 export const metadata: Metadata = {
   title: "Authorize OAuth Client",
@@ -114,7 +119,8 @@ export default async function OAuthAuthorizePage({
     );
   }
 
-  const organization = await getLastActiveOrganization();
+  const { organizations, activeOrganizationId } =
+    await getConsentOrganizations();
   const oauthQuery = buildOAuthQueryString(resolvedSearchParams);
   const parsedQuery = oauthSignedAuthorizeQuerySchema.safeParse(
     Object.fromEntries(new URLSearchParams(oauthQuery).entries())
@@ -189,7 +195,16 @@ export default async function OAuthAuthorizePage({
     getDisplayValue(client.client_name) ??
     getDisplayValue(client.client_uri) ??
     getDisplayValue(client.client_id);
-  const scope = getDisplayValue(resolvedSearchParams.scope);
+
+  const requestedScope = parsedQuery.data.scope ?? "";
+  const scopeGroups = buildScopeGroups(
+    requestedScope ? requestedScope.split(" ") : []
+  );
+  const brandId = resolveOAuthClientBrandId({
+    client_id: client.client_id,
+    client_name: client.client_name,
+    client_uri: client.client_uri,
+  });
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-12">
@@ -198,20 +213,33 @@ export default async function OAuthAuthorizePage({
         className="space-y-6"
         method="post"
       >
-        <div className="space-y-2">
-          <h1 className="font-semibold text-2xl tracking-tight">
-            Authorize {clientName}
-          </h1>
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <OAuthClientLogo
+              brandId={brandId}
+              name={clientName ?? "OAuth client"}
+            />
+            <h1 className="font-semibold text-2xl tracking-tight">
+              Authorize {clientName}
+            </h1>
+          </div>
           <p className="text-muted-foreground text-sm">
-            This client is requesting access to your Notra account
-            {organization ? ` for ${organization.slug}` : ""}.
+            This client is requesting access to your Notra account.
           </p>
         </div>
 
         <OAuthQueryInput />
 
-        {scope ? (
-          <p className="text-muted-foreground text-xs">Scopes: {scope}</p>
+        <OAuthOrgSelector
+          initialOrganizationId={activeOrganizationId}
+          organizations={organizations}
+        />
+
+        {scopeGroups.length ? (
+          <OAuthScopeSelector
+            defaultGrant={requestedScope}
+            groups={scopeGroups}
+          />
         ) : null}
 
         <div className="grid grid-cols-2 gap-3">
