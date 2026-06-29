@@ -5,9 +5,10 @@ import type {
 import { z } from "zod";
 import { API_KEY_EXPIRATION_MS } from "@/constants/api-keys";
 import {
-  getPermissionLevel,
-  getPermissionsForLevel,
-} from "@/lib/api-keys/permissions";
+  expandLegacyApiKeyScopes,
+  getUnknownApiKeyPermissions,
+  summarizeApiKeyScopes,
+} from "@/lib/api-keys/scopes";
 import { unkey } from "@/lib/api-keys/unkey";
 import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { assertActiveSubscription } from "@/lib/billing/subscription";
@@ -148,10 +149,7 @@ export const apiKeysRouter = {
             )
           : [];
 
-        const normalizedPermission = getPermissionLevel(
-          permissions,
-          meta.permission
-        );
+        const scopes = expandLegacyApiKeyScopes(permissions);
 
         return {
           createdAt: key.createdAt,
@@ -160,7 +158,7 @@ export const apiKeysRouter = {
           expires: key.expires ?? null,
           keyId: key.keyId,
           name: key.name ?? "Unnamed",
-          permission: normalizedPermission,
+          permission: summarizeApiKeyScopes(scopes),
           permissions,
           start: key.start,
         };
@@ -186,10 +184,9 @@ export const apiKeysRouter = {
         externalId: input.organizationId,
         meta: {
           createdBy: context.user.name,
-          permission: input.permission,
         },
         name: input.name,
-        permissions: getPermissionsForLevel(input.permission),
+        permissions: input.scopes,
         prefix: "ntra",
       });
 
@@ -253,15 +250,20 @@ export const apiKeysRouter = {
           Date.now() + (API_KEY_EXPIRATION_MS[input.payload.expiration] ?? 0);
       }
 
+      const currentPermissions = Array.isArray(key.permissions)
+        ? key.permissions.filter(
+            (permission): permission is string => typeof permission === "string"
+          )
+        : [];
+      const unknownPermissions =
+        getUnknownApiKeyPermissions(currentPermissions);
+
       await client.keys.updateKey({
         expires,
         keyId: input.payload.keyId,
-        meta: {
-          ...meta,
-          permission: input.payload.permission,
-        },
+        meta,
         name: input.payload.name,
-        permissions: getPermissionsForLevel(input.payload.permission),
+        permissions: [...input.payload.scopes, ...unknownPermissions],
       });
 
       return { success: true };

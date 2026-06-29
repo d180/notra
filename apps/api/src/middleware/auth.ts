@@ -7,6 +7,10 @@ import {
   errors as joseErrors,
   jwtVerify,
 } from "jose";
+import {
+  LEGACY_API_READ_SCOPE,
+  LEGACY_API_WRITE_SCOPE,
+} from "../constants/oauth-scopes";
 import type { AuthData } from "../types/auth";
 import {
   API_URL,
@@ -23,6 +27,7 @@ declare module "hono" {
 
 interface AuthOptions {
   getKey?: (c: Context) => string | null;
+  legacyPermissions?: string[];
   permissions?: string;
 }
 
@@ -132,7 +137,17 @@ function hasRequiredScope(scopes: string[], requiredScope?: string) {
     return true;
   }
 
-  return scopes.includes(requiredScope) || scopes.includes("*");
+  if (scopes.includes(requiredScope) || scopes.includes("*")) {
+    return true;
+  }
+
+  if (scopes.includes(LEGACY_API_WRITE_SCOPE)) {
+    return true;
+  }
+
+  return (
+    requiredScope.endsWith(".read") && scopes.includes(LEGACY_API_READ_SCOPE)
+  );
 }
 
 async function verifyOAuthToken(
@@ -224,10 +239,33 @@ async function verifyRequestAuth(
 
   try {
     const unkey = new Unkey({ rootKey: c.env.UNKEY_ROOT_KEY });
-    const result = await unkey.keys.verifyKey({
+    const permissionsToTry = [
+      options.permissions,
+      ...(options.legacyPermissions ?? []),
+    ].filter(
+      (permission, index, permissions): permission is string =>
+        typeof permission === "string" &&
+        permission.length > 0 &&
+        permissions.indexOf(permission) === index
+    );
+    let result = await unkey.keys.verifyKey({
       key: apiKey,
-      permissions: options.permissions,
+      ...(permissionsToTry[0] ? { permissions: permissionsToTry[0] } : {}),
     });
+
+    for (const permission of permissionsToTry.slice(1)) {
+      if (
+        result.data.valid ||
+        result.data.code !== "INSUFFICIENT_PERMISSIONS"
+      ) {
+        break;
+      }
+
+      result = await unkey.keys.verifyKey({
+        key: apiKey,
+        permissions: permission,
+      });
+    }
 
     if (!result.data.valid) {
       if (result.data.code === "INSUFFICIENT_PERMISSIONS") {
