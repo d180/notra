@@ -36,7 +36,7 @@ import {
 } from "@notra/ui/components/ui/tooltip";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { BrandIdentityRadioGroup } from "@/components/brand-identity-radio-group";
 import { Button } from "@/components/button";
@@ -54,36 +54,29 @@ import {
 } from "@/schemas/automation/event-trigger-form";
 import type { CreateEventTriggerDialogProps } from "@/types/automation/event-trigger";
 import type { Trigger } from "@/types/triggers/triggers";
+import { getDefaultEventTriggerValues } from "@/utils/event-trigger-form";
 import { EventTypeCard } from "./event-type-card";
-
-const DEFAULT_VALUES: EventTriggerFormValues = {
-  eventType: "release",
-  outputType: "changelog",
-  repositoryIds: [],
-  brandVoiceId: "",
-  autoPublish: false,
-};
 
 export function CreateEventTriggerDialog({
   organizationId,
   onSuccess,
   trigger,
+  editTrigger,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: CreateEventTriggerDialogProps) {
+  const isEditMode = !!editTrigger;
   const [internalOpen, setInternalOpen] = useState(false);
+  const lastResetKeyRef = useRef<string | null>(null);
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : internalOpen;
-  const setOpen = useCallback(
-    (next: boolean) => {
-      if (isControlled) {
-        controlledOnOpenChange?.(next);
-      } else {
-        setInternalOpen(next);
-      }
-    },
-    [controlledOnOpenChange, isControlled]
-  );
+  const setOpen = (next: boolean) => {
+    if (isControlled) {
+      controlledOnOpenChange?.(next);
+    } else {
+      setInternalOpen(next);
+    }
+  };
   const [addRepoOpen, setAddRepoOpen] = useState(false);
   const comboboxAnchor = useComboboxAnchor();
 
@@ -109,6 +102,13 @@ export function CreateEventTriggerDialog({
       };
 
       try {
+        if (isEditMode) {
+          return await dashboardOrpc.automation.events.update.call({
+            triggerId: editTrigger.id,
+            ...payload,
+            enabled: editTrigger.enabled,
+          });
+        }
         return await dashboardOrpc.automation.events.create.call(payload);
       } catch (error) {
         if (error instanceof Error && error.message === "Duplicate trigger") {
@@ -117,11 +117,13 @@ export function CreateEventTriggerDialog({
         if (error instanceof Error && error.message) {
           throw error;
         }
-        throw new Error("Failed to create trigger");
+        throw new Error(
+          isEditMode ? "Failed to update trigger" : "Failed to create trigger"
+        );
       }
     },
     onSuccess: (data) => {
-      toast.success("Trigger added");
+      toast.success(isEditMode ? "Trigger updated" : "Trigger added");
       onSuccess?.(data.trigger);
       setOpen(false);
     },
@@ -131,7 +133,7 @@ export function CreateEventTriggerDialog({
   });
 
   const form = useForm({
-    defaultValues: DEFAULT_VALUES,
+    defaultValues: getDefaultEventTriggerValues(editTrigger),
     validators: {
       onSubmit: eventTriggerFormSchema,
     },
@@ -141,10 +143,19 @@ export function CreateEventTriggerDialog({
   });
 
   useEffect(() => {
-    if (open) {
-      form.reset();
+    if (!open) {
+      lastResetKeyRef.current = null;
+      return;
     }
-  }, [open, form]);
+
+    const resetKey = editTrigger?.id ?? "create";
+    if (lastResetKeyRef.current === resetKey) {
+      return;
+    }
+
+    form.reset(getDefaultEventTriggerValues(editTrigger));
+    lastResetKeyRef.current = resetKey;
+  }, [editTrigger, form, open]);
 
   const outputType = useStore(form.store, (s) => s.values.outputType);
   const repositoryCount = useStore(
@@ -175,27 +186,20 @@ export function CreateEventTriggerDialog({
     ? `${defaultBrandVoiceName} (Default)`
     : "Default brand voice";
 
-  const { integrationOptions, githubIntegrationId } = useMemo(() => {
-    const githubIntegrations =
-      integrationsResponse?.integrations.filter(
-        (i) => i.type === "github" && i.enabled
-      ) ?? [];
-    const repos = githubIntegrations.flatMap((i) =>
-      i.repositories.filter((r) => r.enabled)
-    );
-
-    const options = repos.map((r) => ({
-      value: r.id,
-      label: r.defaultBranch
-        ? `${r.owner}/${r.repo} · ${r.defaultBranch}`
-        : `${r.owner}/${r.repo}`,
-    }));
-
-    return {
-      integrationOptions: options,
-      githubIntegrationId: githubIntegrations[0]?.id,
-    };
-  }, [integrationsResponse]);
+  const githubIntegrations =
+    integrationsResponse?.integrations.filter(
+      (integration) => integration.type === "github" && integration.enabled
+    ) ?? [];
+  const repos = githubIntegrations.flatMap((integration) =>
+    integration.repositories.filter((repository) => repository.enabled)
+  );
+  const integrationOptions = repos.map((repository) => ({
+    value: repository.id,
+    label: repository.defaultBranch
+      ? `${repository.owner}/${repository.repo} · ${repository.defaultBranch}`
+      : `${repository.owner}/${repository.repo}`,
+  }));
+  const githubIntegrationId = githubIntegrations[0]?.id;
 
   const formError = useStore(form.store, (state) => {
     if (state.submissionAttempts === 0) {
@@ -219,10 +223,12 @@ export function CreateEventTriggerDialog({
     return null;
   });
 
-  const handleOpenAddRepoFlow = useCallback(() => {
-    setOpen(false);
+  const handleOpenAddRepoFlow = () => {
     setAddRepoOpen(true);
-  }, [setOpen]);
+    if (!isEditMode) {
+      setOpen(false);
+    }
+  };
 
   return (
     <>
@@ -231,7 +237,7 @@ export function CreateEventTriggerDialog({
         <ResponsiveDialogContent className="flex h-[85vh] max-h-[85vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
           <ResponsiveDialogHeader className="shrink-0 border-b p-4 pr-14">
             <ResponsiveDialogTitle className="text-base">
-              New event trigger
+              {isEditMode ? "Edit event trigger" : "New event trigger"}
             </ResponsiveDialogTitle>
             <p className="text-muted-foreground text-sm">
               React to GitHub activity and generate content automatically.
@@ -444,69 +450,117 @@ export function CreateEventTriggerDialog({
               </div>
             </div>
 
-            <div className="shrink-0 border-t bg-muted/30 px-4 py-3">
-              <div className="flex items-center justify-between gap-3">
-                <FooterStatus
-                  errorMessage={formError}
-                  repositoryCount={repositoryCount}
-                />
-                <div className="flex items-center gap-2">
-                  <Button
-                    disabled={mutation.isPending}
-                    onClick={() => setOpen(false)}
-                    size="sm"
-                    type="button"
-                    variant="ghost"
-                  >
-                    Cancel
-                  </Button>
-                  <Button disabled={mutation.isPending} type="submit">
-                    {mutation.isPending ? (
-                      <>
-                        <HugeiconsIcon
-                          className="size-4 animate-spin"
-                          icon={Loading03Icon}
-                        />
-                        Adding...
-                      </>
-                    ) : (
-                      <>
-                        <HugeiconsIcon className="size-4" icon={Add01Icon} />
-                        Add trigger
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <DialogFooter
+              errorMessage={formError}
+              isEditMode={isEditMode}
+              isPending={mutation.isPending}
+              onCancel={() => setOpen(false)}
+              repositoryCount={repositoryCount}
+            />
           </form>
         </ResponsiveDialogContent>
       </ResponsiveDialog>
-      {githubIntegrationId ? (
-        <AddRepositoryDialog
-          integrationId={githubIntegrationId}
-          onOpenChange={(isOpen) => {
-            setAddRepoOpen(isOpen);
-            if (!isOpen) {
-              setOpen(true);
-            }
-          }}
-          open={addRepoOpen}
-          organizationId={organizationId}
-        />
-      ) : (
-        <AddIntegrationDialog
-          onOpenChange={(isOpen) => {
-            setAddRepoOpen(isOpen);
-            if (!isOpen) {
-              setOpen(true);
-            }
-          }}
-          open={addRepoOpen}
-          organizationId={organizationId}
-        />
-      )}
+      <RepositoryConnectionDialogs
+        githubIntegrationId={githubIntegrationId}
+        isEditMode={isEditMode}
+        onOpenChange={(isOpen) => {
+          setAddRepoOpen(isOpen);
+          if (!(isOpen || isEditMode)) {
+            setOpen(true);
+          }
+        }}
+        open={addRepoOpen}
+        organizationId={organizationId}
+      />
     </>
+  );
+}
+
+interface DialogFooterProps {
+  errorMessage: string | null;
+  isEditMode: boolean;
+  isPending: boolean;
+  onCancel: () => void;
+  repositoryCount: number;
+}
+
+function DialogFooter({
+  errorMessage,
+  isEditMode,
+  isPending,
+  onCancel,
+  repositoryCount,
+}: DialogFooterProps) {
+  return (
+    <div className="shrink-0 border-t bg-muted/30 px-4 py-3">
+      <div className="flex items-center justify-between gap-3">
+        <FooterStatus
+          errorMessage={errorMessage}
+          repositoryCount={repositoryCount}
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            disabled={isPending}
+            onClick={onCancel}
+            size="sm"
+            type="button"
+            variant="ghost"
+          >
+            Cancel
+          </Button>
+          <Button disabled={isPending} type="submit">
+            {isPending ? (
+              <>
+                <HugeiconsIcon
+                  className="size-4 animate-spin"
+                  icon={Loading03Icon}
+                />
+                {isEditMode ? "Saving..." : "Adding..."}
+              </>
+            ) : (
+              <>
+                <HugeiconsIcon className="size-4" icon={Add01Icon} />
+                {isEditMode ? "Save changes" : "Add trigger"}
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface RepositoryConnectionDialogsProps {
+  githubIntegrationId?: string;
+  isEditMode: boolean;
+  onOpenChange: (open: boolean) => void;
+  open: boolean;
+  organizationId: string;
+}
+
+function RepositoryConnectionDialogs({
+  githubIntegrationId,
+  onOpenChange,
+  open,
+  organizationId,
+}: RepositoryConnectionDialogsProps) {
+  if (githubIntegrationId) {
+    return (
+      <AddRepositoryDialog
+        integrationId={githubIntegrationId}
+        onOpenChange={onOpenChange}
+        open={open}
+        organizationId={organizationId}
+      />
+    );
+  }
+
+  return (
+    <AddIntegrationDialog
+      onOpenChange={onOpenChange}
+      open={open}
+      organizationId={organizationId}
+    />
   );
 }
 
