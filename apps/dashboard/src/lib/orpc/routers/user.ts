@@ -27,6 +27,8 @@ export const userRouter = {
       });
 
       const ownedOrganizations: Array<{
+        heardAboutNotraOther: string | null;
+        heardAboutNotraSource: string | null;
         id: string;
         logo: string | null;
         memberCount: number;
@@ -99,6 +101,8 @@ export const userRouter = {
         }
 
         ownedOrganizations.push({
+          heardAboutNotraOther: org.heardAboutNotraOther,
+          heardAboutNotraSource: org.heardAboutNotraSource,
           id: org.id,
           logo: org.logo,
           memberCount,

@@ -2,7 +2,7 @@
 
 import { redis } from "@notra/ai/utils/redis";
 import { db } from "@notra/db/drizzle";
-import { brandSettings, members } from "@notra/db/schema";
+import { brandSettings, members, organizations } from "@notra/db/schema";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/server";
@@ -11,6 +11,10 @@ import {
   type OnboardingBrandAnalysisInput,
   onboardingBrandAnalysisSchema,
 } from "@/schemas/brand-analysis";
+import {
+  type OnboardingWorkspaceInput,
+  onboardingWorkspaceFieldsSchema,
+} from "@/schemas/onboarding/workspace";
 import { ratelimit } from "@/utils/ratelimit";
 
 const ANALYSIS_LOCK_TTL_SECONDS = 60;
@@ -93,6 +97,53 @@ export async function triggerOnboardingBrandAnalysis(
       "Couldn't kick off the brand analysis. Please try again in a moment."
     );
   }
+
+  return { success: true };
+}
+
+export async function saveOnboardingAttribution(
+  rawInput: Pick<
+    OnboardingWorkspaceInput,
+    "heardAboutNotraOther" | "heardAboutNotraSource"
+  > & {
+    organizationId: string;
+  }
+) {
+  const input = onboardingWorkspaceFieldsSchema
+    .pick({
+      heardAboutNotraOther: true,
+      heardAboutNotraSource: true,
+    })
+    .extend({
+      organizationId: onboardingBrandAnalysisSchema.shape.organizationId,
+    })
+    .parse(rawInput);
+
+  const session = await auth.api.getSession({ headers: await headers() });
+
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
+
+  const membership = await db.query.members.findFirst({
+    where: and(
+      eq(members.userId, session.user.id),
+      eq(members.organizationId, input.organizationId)
+    ),
+    columns: { id: true },
+  });
+
+  if (!membership) {
+    throw new Error("Forbidden");
+  }
+
+  await db
+    .update(organizations)
+    .set({
+      heardAboutNotraSource: input.heardAboutNotraSource,
+      heardAboutNotraOther: input.heardAboutNotraOther || null,
+    })
+    .where(eq(organizations.id, input.organizationId));
 
   return { success: true };
 }

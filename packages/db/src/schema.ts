@@ -314,6 +314,8 @@ export const organizations = pgTable(
     logo: text("logo"),
     createdAt: timestamp("created_at").notNull(),
     metadata: text("metadata"),
+    heardAboutNotraSource: text("heard_about_notra_source"),
+    heardAboutNotraOther: text("heard_about_notra_other"),
     onboardingCompleted: boolean("onboarding_completed")
       .default(false)
       .notNull(),

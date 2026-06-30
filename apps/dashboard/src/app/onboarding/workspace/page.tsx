@@ -36,7 +36,13 @@ export default async function OnboardingWorkspacePage() {
 
     const existingOrgRow = await db.query.organizations.findFirst({
       where: eq(organizations.id, existing.id),
-      columns: { id: true, slug: true, name: true },
+      columns: {
+        heardAboutNotraOther: true,
+        heardAboutNotraSource: true,
+        id: true,
+        slug: true,
+        name: true,
+      },
     });
 
     if (existingOrgRow) {

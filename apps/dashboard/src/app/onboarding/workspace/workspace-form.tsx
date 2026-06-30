@@ -2,6 +2,14 @@
 
 import { Input } from "@notra/ui/components/ui/input";
 import { Label } from "@notra/ui/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@notra/ui/components/ui/select";
+import { Textarea } from "@notra/ui/components/ui/textarea";
 import { useForm } from "@tanstack/react-form";
 import { Loader2Icon } from "lucide-react";
 import { useState } from "react";
@@ -10,11 +18,21 @@ import { toast } from "sonner";
 import * as z from "zod";
 import { Button } from "@/components/button";
 import { OnboardingProgress } from "@/components/onboarding/progress";
+import {
+  getHeardAboutNotraLabel,
+  ONBOARDING_HEARD_ABOUT_NOTRA_OPTIONS,
+} from "@/constants/onboarding";
 import { authClient } from "@/lib/auth/client";
 import { generateOrganizationAvatar } from "@/lib/utils";
-import { onboardingWorkspaceSchema } from "@/schemas/onboarding/workspace";
+import {
+  onboardingWorkspaceFieldsSchema,
+  onboardingWorkspaceSchema,
+} from "@/schemas/onboarding/workspace";
 import { setLastVisitedOrganization } from "@/utils/cookies";
-import { triggerOnboardingBrandAnalysis } from "./actions";
+import {
+  saveOnboardingAttribution,
+  triggerOnboardingBrandAnalysis,
+} from "./actions";
 
 const WEBSITE_PREFIX_REGEX = /^https?:\/\//i;
 const slugSchema = z.string().slugify();
@@ -36,6 +54,8 @@ function getValidationMessage(error: unknown) {
 }
 
 interface ExistingOrg {
+  heardAboutNotraOther: string | null;
+  heardAboutNotraSource: string | null;
   id: string;
   slug: string;
   name: string;
@@ -45,78 +65,90 @@ interface WorkspaceFormProps {
   existingOrg?: ExistingOrg;
 }
 
+async function submitWorkspaceForm({
+  existingOrg,
+  value,
+}: {
+  existingOrg?: ExistingOrg;
+  value: {
+    heardAboutNotraOther: string;
+    heardAboutNotraSource: string;
+    name: string;
+    slug: string;
+    websiteUrl: string;
+  };
+}) {
+  const parsed = onboardingWorkspaceSchema.safeParse(value);
+
+  if (!parsed.success) {
+    throw new Error(
+      parsed.error.issues[0]?.message ?? "Please check your inputs"
+    );
+  }
+
+  let organizationId: string;
+
+  if (existingOrg) {
+    organizationId = existingOrg.id;
+  } else {
+    const { data, error } = await authClient.organization.create({
+      name: parsed.data.name,
+      slug: parsed.data.slug,
+      logo: generateOrganizationAvatar(parsed.data.slug),
+    });
+
+    if (error || !data) {
+      throw new Error(error?.message ?? "Failed to create org");
+    }
+
+    organizationId = data.id;
+
+    await authClient.organization.setActive({
+      organizationId: data.id,
+    });
+    await setLastVisitedOrganization(data.slug);
+  }
+
+  await saveOnboardingAttribution({
+    heardAboutNotraOther: parsed.data.heardAboutNotraOther,
+    heardAboutNotraSource: parsed.data.heardAboutNotraSource,
+    organizationId,
+  });
+
+  if (parsed.data.websiteUrl) {
+    const brandAnalysisPromise = triggerOnboardingBrandAnalysis({
+      organizationId,
+      websiteUrl: parsed.data.websiteUrl,
+      name: parsed.data.name,
+    });
+
+    brandAnalysisPromise.catch((error) => {
+      console.error("[Onboarding] Background brand analysis failed", {
+        organizationId,
+        error,
+      });
+    });
+  }
+}
+
 export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isResuming = !!existingOrg;
 
   const form = useForm({
     defaultValues: {
+      heardAboutNotraOther: existingOrg?.heardAboutNotraOther ?? "",
+      heardAboutNotraSource: existingOrg?.heardAboutNotraSource ?? "",
       name: existingOrg?.name ?? "",
       slug: existingOrg?.slug ?? "",
       websiteUrl: "",
-    },
-    validators: {
-      onSubmit: onboardingWorkspaceSchema,
     },
     onSubmit: async ({ value }) => {
       setIsSubmitting(true);
 
       try {
-        const parsed = onboardingWorkspaceSchema.safeParse(value);
-
-        if (!parsed.success) {
-          const message =
-            parsed.error.issues[0]?.message ?? "Please check your inputs";
-          toast.error(message);
-          setIsSubmitting(false);
-          return;
-        }
-
-        let organizationId: string;
-        let organizationSlug: string;
-
-        if (existingOrg) {
-          organizationId = existingOrg.id;
-          organizationSlug = existingOrg.slug;
-        } else {
-          const { data, error } = await authClient.organization.create({
-            name: parsed.data.name,
-            slug: parsed.data.slug,
-            logo: generateOrganizationAvatar(parsed.data.slug),
-          });
-
-          if (error || !data) {
-            toast.error(error?.message ?? "Failed to create org");
-            setIsSubmitting(false);
-            return;
-          }
-
-          organizationId = data.id;
-          organizationSlug = data.slug;
-
-          await authClient.organization.setActive({
-            organizationId: data.id,
-          });
-          await setLastVisitedOrganization(data.slug);
-        }
-
-        if (parsed.data.websiteUrl) {
-          const brandAnalysisPromise = triggerOnboardingBrandAnalysis({
-            organizationId,
-            websiteUrl: parsed.data.websiteUrl,
-            name: parsed.data.name,
-          });
-
-          brandAnalysisPromise.catch((error) => {
-            console.error("[Onboarding] Background brand analysis failed", {
-              organizationId,
-              error,
-            });
-          });
-        }
-
+        await submitWorkspaceForm({ existingOrg, value });
         window.location.assign("/onboarding/socials");
-        return;
       } catch (err) {
         toast.error(
           err instanceof Error ? err.message : "Failed to create org"
@@ -154,7 +186,7 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
         <form.Field
           name="name"
           validators={{
-            onChange: onboardingWorkspaceSchema.shape.name,
+            onChange: onboardingWorkspaceFieldsSchema.shape.name,
           }}
         >
           {(field) => (
@@ -194,7 +226,7 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
         <form.Field
           name="slug"
           validators={{
-            onChange: onboardingWorkspaceSchema.shape.slug,
+            onChange: onboardingWorkspaceFieldsSchema.shape.slug,
           }}
         >
           {(field) => (
@@ -226,9 +258,103 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
         </form.Field>
 
         <form.Field
+          name="heardAboutNotraSource"
+          validators={{
+            onChange:
+              onboardingWorkspaceFieldsSchema.shape.heardAboutNotraSource,
+          }}
+        >
+          {(field) => (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="heard-about-notra">
+                  Where did you hear about Notra?{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  onValueChange={(value) => {
+                    if (!value) {
+                      return;
+                    }
+
+                    field.handleChange(value);
+                    if (value !== "other") {
+                      form.setFieldValue("heardAboutNotraOther", "");
+                    }
+                  }}
+                  value={field.state.value}
+                >
+                  <SelectTrigger
+                    aria-invalid={field.state.meta.errors.length > 0}
+                    className="h-10 w-full"
+                    disabled={isSubmitting}
+                    id="heard-about-notra"
+                  >
+                    <SelectValue placeholder="Select an option">
+                      {(value) =>
+                        getHeardAboutNotraLabel(value) ?? "Select an option"
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ONBOARDING_HEARD_ABOUT_NOTRA_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {field.state.meta.errors.length > 0 ? (
+                  <p className="text-destructive text-sm">
+                    {getValidationMessage(field.state.meta.errors[0])}
+                  </p>
+                ) : null}
+              </div>
+
+              {field.state.value === "other" ? (
+                <form.Field
+                  name="heardAboutNotraOther"
+                  validators={{
+                    onChange: z.string().trim().max(120),
+                  }}
+                >
+                  {(otherField) => (
+                    <div className="grid gap-2">
+                      <Label htmlFor="heard-about-notra-other">
+                        Tell us where{" "}
+                        <span className="text-destructive">*</span>
+                      </Label>
+                      <Textarea
+                        aria-invalid={otherField.state.meta.errors.length > 0}
+                        disabled={isSubmitting}
+                        id="heard-about-notra-other"
+                        onBlur={otherField.handleBlur}
+                        onChange={(e) =>
+                          otherField.handleChange(e.target.value)
+                        }
+                        placeholder="Podcast, community, friend, etc."
+                        rows={3}
+                        value={otherField.state.value}
+                      />
+                      {otherField.state.meta.errors.length > 0 ? (
+                        <p className="text-destructive text-sm">
+                          {getValidationMessage(
+                            otherField.state.meta.errors[0]
+                          )}
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
+                </form.Field>
+              ) : null}
+            </>
+          )}
+        </form.Field>
+
+        <form.Field
           name="websiteUrl"
           validators={{
-            onChange: onboardingWorkspaceSchema.shape.websiteUrl,
+            onChange: onboardingWorkspaceFieldsSchema.shape.websiteUrl,
           }}
         >
           {(field) => (
