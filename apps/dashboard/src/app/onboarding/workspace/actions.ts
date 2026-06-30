@@ -5,6 +5,8 @@ import { db } from "@notra/db/drizzle";
 import { brandSettings, members, organizations } from "@notra/db/schema";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
+// biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
+import * as z from "zod";
 import { auth } from "@/lib/auth/server";
 import { queueBrandAnalysisForOnboarding } from "@/lib/brand-analysis";
 import {
@@ -12,8 +14,8 @@ import {
   onboardingBrandAnalysisSchema,
 } from "@/schemas/brand-analysis";
 import {
+  onboardingWorkspaceAttributionSchema,
   type OnboardingWorkspaceInput,
-  onboardingWorkspaceFieldsSchema,
 } from "@/schemas/onboarding/workspace";
 import { ratelimit } from "@/utils/ratelimit";
 
@@ -109,14 +111,11 @@ export async function saveOnboardingAttribution(
     organizationId: string;
   }
 ) {
-  const input = onboardingWorkspaceFieldsSchema
-    .pick({
-      heardAboutNotraOther: true,
-      heardAboutNotraSource: true,
-    })
-    .extend({
+  const input = z
+    .object({
       organizationId: onboardingBrandAnalysisSchema.shape.organizationId,
     })
+    .and(onboardingWorkspaceAttributionSchema)
     .parse(rawInput);
 
   const session = await auth.api.getSession({ headers: await headers() });

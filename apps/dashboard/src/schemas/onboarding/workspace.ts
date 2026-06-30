@@ -22,6 +22,32 @@ export const onboardingWorkspaceFieldsSchema = z.object({
   heardAboutNotraOther: z.string().trim().max(120).optional(),
 });
 
+export const onboardingWorkspaceAttributionSchema =
+  onboardingWorkspaceFieldsSchema
+    .pick({
+      heardAboutNotraOther: true,
+      heardAboutNotraSource: true,
+    })
+    .superRefine((value, ctx) => {
+      if (
+        value.heardAboutNotraSource === "other" &&
+        !value.heardAboutNotraOther?.trim()
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Please share where you heard about Notra",
+          path: ["heardAboutNotraOther"],
+        });
+      }
+    })
+    .transform((value) => ({
+      ...value,
+      heardAboutNotraOther:
+        value.heardAboutNotraSource === "other"
+          ? value.heardAboutNotraOther?.trim() || ""
+          : "",
+    }));
+
 export const onboardingWorkspaceSchema = onboardingWorkspaceFieldsSchema
   .superRefine((value, ctx) => {
     if (
