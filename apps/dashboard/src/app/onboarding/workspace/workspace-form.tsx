@@ -72,7 +72,7 @@ async function submitWorkspaceForm({
   existingOrg?: ExistingOrg;
   value: {
     heardAboutNotraOther: string;
-    heardAboutNotraSource: string;
+    heardAboutNotraSource: string | null | undefined;
     name: string;
     slug: string;
     websiteUrl: string;
@@ -267,10 +267,31 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
           {(field) => (
             <>
               <div className="grid gap-2">
-                <Label htmlFor="heard-about-notra">
-                  Where did you hear about Notra?{" "}
-                  <span className="text-destructive">*</span>
-                </Label>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="heard-about-notra">
+                    Where did you hear about Notra?{" "}
+                    {field.state.value !== "other" ? (
+                      <span className="text-muted-foreground text-xs">
+                        (optional)
+                      </span>
+                    ) : null}
+                  </Label>
+                  {field.state.value ? (
+                    <Button
+                      className="h-auto px-0 text-muted-foreground"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        field.handleChange("");
+                        form.setFieldValue("heardAboutNotraOther", "");
+                      }}
+                      size="sm"
+                      type="button"
+                      variant="ghost"
+                    >
+                      Clear
+                    </Button>
+                  ) : null}
+                </div>
                 <Select
                   onValueChange={(value) => {
                     if (!value) {

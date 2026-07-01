@@ -14,8 +14,8 @@ import {
   onboardingBrandAnalysisSchema,
 } from "@/schemas/brand-analysis";
 import {
-  onboardingWorkspaceAttributionSchema,
   type OnboardingWorkspaceInput,
+  onboardingWorkspaceAttributionSchema,
 } from "@/schemas/onboarding/workspace";
 import { ratelimit } from "@/utils/ratelimit";
 
@@ -139,7 +139,7 @@ export async function saveOnboardingAttribution(
   await db
     .update(organizations)
     .set({
-      heardAboutNotraSource: input.heardAboutNotraSource,
+      heardAboutNotraSource: input.heardAboutNotraSource || null,
       heardAboutNotraOther: input.heardAboutNotraOther || null,
     })
     .where(eq(organizations.id, input.organizationId));

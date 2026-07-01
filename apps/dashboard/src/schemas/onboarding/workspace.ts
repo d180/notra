@@ -14,11 +14,17 @@ const heardAboutNotraSourceValues = ONBOARDING_HEARD_ABOUT_NOTRA_OPTIONS.map(
   (option) => option.value
 ) as [OnboardingHeardAboutNotraSource, ...OnboardingHeardAboutNotraSource[]];
 
+const heardAboutNotraSourceSchema = z.union([
+  z.enum(heardAboutNotraSourceValues),
+  z.literal(""),
+  z.null(),
+]);
+
 export const onboardingWorkspaceFieldsSchema = z.object({
   name: organizationNameSchema,
   slug: organizationSlugSchema,
   websiteUrl: optionalPublicWebsiteUrlSchema,
-  heardAboutNotraSource: z.enum(heardAboutNotraSourceValues),
+  heardAboutNotraSource: heardAboutNotraSourceSchema,
   heardAboutNotraOther: z.string().trim().max(120).optional(),
 });
 
@@ -42,6 +48,7 @@ export const onboardingWorkspaceAttributionSchema =
     })
     .transform((value) => ({
       ...value,
+      heardAboutNotraSource: value.heardAboutNotraSource || null,
       heardAboutNotraOther:
         value.heardAboutNotraSource === "other"
           ? value.heardAboutNotraOther?.trim() || ""
@@ -63,6 +70,7 @@ export const onboardingWorkspaceSchema = onboardingWorkspaceFieldsSchema
   })
   .transform((value) => ({
     ...value,
+    heardAboutNotraSource: value.heardAboutNotraSource || null,
     heardAboutNotraOther:
       value.heardAboutNotraSource === "other"
         ? value.heardAboutNotraOther?.trim() || ""
