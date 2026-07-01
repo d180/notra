@@ -156,6 +156,21 @@ function serializeSchedule(trigger: ScheduleTriggerWithLookbackWindow) {
   };
 }
 
+function safeSerializeSchedule(
+  trigger: Parameters<typeof serializeSchedule>[0]
+) {
+  try {
+    return serializeSchedule(trigger);
+  } catch (error) {
+    if (!(error instanceof z.ZodError)) {
+      throw error;
+    }
+
+    logError(`Skipping malformed schedule ${trigger.id}`, error);
+    return null;
+  }
+}
+
 function mapQstashError(error: unknown) {
   const message = error instanceof Error ? error.message : "Unknown error";
 
@@ -307,6 +322,7 @@ const getSchedulesRoute = createRoute({
     401: errorResponse("Missing or invalid API key"),
     403: errorResponse("Forbidden"),
     404: errorResponse("Organization not found"),
+    500: errorResponse("Failed to list schedules"),
     503: errorResponse("Authentication service unavailable"),
   },
 });
@@ -446,13 +462,15 @@ schedulesRoutes.openapi(getSchedulesRoute, async (c) => {
   );
   const filteredTriggers = filterByRepositoryIds(triggers, repositoryIds);
 
-  const schedules = filteredTriggers.map((trigger) =>
-    serializeSchedule({
-      ...trigger,
-      lookbackWindow:
-        lookbackWindowByTriggerId.get(trigger.id) ?? "last_7_days",
-    })
-  );
+  const schedules = filteredTriggers
+    .map((trigger) =>
+      safeSerializeSchedule({
+        ...trigger,
+        lookbackWindow:
+          lookbackWindowByTriggerId.get(trigger.id) ?? "last_7_days",
+      })
+    )
+    .filter((schedule) => schedule !== null);
 
   const allRepositoryIds = [
     ...new Set(schedules.flatMap((schedule) => schedule.targets.repositoryIds)),
