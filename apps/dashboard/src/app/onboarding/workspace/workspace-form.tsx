@@ -56,6 +56,9 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
   const initialSource = isHeardAboutNotraSource(existingSource)
     ? existingSource
     : "";
+  const isAttributionLocked = Boolean(
+    existingSource || existingOrg?.heardAboutNotraOther
+  );
 
   const form = useForm({
     defaultValues: {
@@ -201,7 +204,7 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
                       </span>
                     ) : null}
                   </Label>
-                  {field.state.value ? (
+                  {field.state.value && !isAttributionLocked ? (
                     <Button
                       className="h-auto px-0 text-muted-foreground"
                       disabled={isSubmitting}
@@ -233,7 +236,7 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
                   <SelectTrigger
                     aria-invalid={field.state.meta.errors.length > 0}
                     className="h-10 w-full"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isAttributionLocked}
                     id="heard-about-notra"
                   >
                     <SelectValue placeholder="Select an option">
@@ -274,7 +277,7 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
                       </Label>
                       <Textarea
                         aria-invalid={otherField.state.meta.errors.length > 0}
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || isAttributionLocked}
                         id="heard-about-notra-other"
                         onBlur={otherField.handleBlur}
                         onChange={(e) =>

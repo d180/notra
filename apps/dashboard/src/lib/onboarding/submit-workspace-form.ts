@@ -43,27 +43,36 @@ export async function submitWorkspaceForm({
     await setLastVisitedOrganization(data.slug);
   }
 
-  const attributionPromise = saveOnboardingAttribution({
-    heardAboutNotraOther: parsed.data.heardAboutNotraOther,
-    heardAboutNotraSource: parsed.data.heardAboutNotraSource,
-    organizationId,
-  });
+  const hasAttribution = Boolean(
+    parsed.data.heardAboutNotraSource || parsed.data.heardAboutNotraOther
+  );
+  const attributionAlreadyRecorded = Boolean(
+    existingOrg?.heardAboutNotraSource || existingOrg?.heardAboutNotraOther
+  );
 
-  attributionPromise
-    .then((result) => {
-      if (!result.success) {
+  if (hasAttribution && !attributionAlreadyRecorded) {
+    const attributionPromise = saveOnboardingAttribution({
+      heardAboutNotraOther: parsed.data.heardAboutNotraOther,
+      heardAboutNotraSource: parsed.data.heardAboutNotraSource,
+      organizationId,
+    });
+
+    attributionPromise
+      .then((result) => {
+        if (!result.success) {
+          console.error("[Onboarding] Failed to save attribution", {
+            organizationId,
+            error: result.error,
+          });
+        }
+      })
+      .catch((error) => {
         console.error("[Onboarding] Failed to save attribution", {
           organizationId,
-          error: result.error,
+          error,
         });
-      }
-    })
-    .catch((error) => {
-      console.error("[Onboarding] Failed to save attribution", {
-        organizationId,
-        error,
       });
-    });
+  }
 
   if (parsed.data.websiteUrl) {
     const brandAnalysisPromise = triggerOnboardingBrandAnalysis({

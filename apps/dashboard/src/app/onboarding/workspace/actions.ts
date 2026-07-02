@@ -4,7 +4,7 @@ import { redis } from "@notra/ai/utils/redis";
 import { db } from "@notra/db/drizzle";
 import { brandSettings, members, organizations } from "@notra/db/schema";
 import { ORPCError } from "@orpc/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { headers } from "next/headers";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
@@ -125,11 +125,14 @@ export async function saveOnboardingAttribution(
     };
   }
 
+  let membershipRole: string;
+
   try {
-    await assertOrganizationAccess({
+    const access = await assertOrganizationAccess({
       headers: await headers(),
       organizationId: parsed.data.organizationId,
     });
+    membershipRole = access.membership.role;
   } catch (error) {
     if (error instanceof ORPCError) {
       return {
@@ -141,13 +144,32 @@ export async function saveOnboardingAttribution(
     throw error;
   }
 
+  if (membershipRole !== "owner") {
+    return {
+      success: false,
+      error: "Only the organization owner can set this",
+    };
+  }
+
+  if (
+    !(parsed.data.heardAboutNotraSource || parsed.data.heardAboutNotraOther)
+  ) {
+    return { success: true };
+  }
+
   await db
     .update(organizations)
     .set({
       heardAboutNotraSource: parsed.data.heardAboutNotraSource,
       heardAboutNotraOther: parsed.data.heardAboutNotraOther,
     })
-    .where(eq(organizations.id, parsed.data.organizationId));
+    .where(
+      and(
+        eq(organizations.id, parsed.data.organizationId),
+        isNull(organizations.heardAboutNotraSource),
+        isNull(organizations.heardAboutNotraOther)
+      )
+    );
 
   return { success: true };
 }
