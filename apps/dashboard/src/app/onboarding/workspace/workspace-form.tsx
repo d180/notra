@@ -18,21 +18,17 @@ import { toast } from "sonner";
 import * as z from "zod";
 import { Button } from "@/components/button";
 import { OnboardingProgress } from "@/components/onboarding/progress";
+import { ONBOARDING_HEARD_ABOUT_NOTRA_OPTIONS } from "@/constants/onboarding";
+import { submitWorkspaceForm } from "@/lib/onboarding/submit-workspace-form";
+import {
+  onboardingWorkspaceFormFieldsSchema,
+  onboardingWorkspaceFormSchema,
+} from "@/schemas/onboarding/workspace";
+import type { WorkspaceFormProps } from "@/types/onboarding";
 import {
   getHeardAboutNotraLabel,
-  ONBOARDING_HEARD_ABOUT_NOTRA_OPTIONS,
-} from "@/constants/onboarding";
-import { authClient } from "@/lib/auth/client";
-import { generateOrganizationAvatar } from "@/lib/utils";
-import {
-  onboardingWorkspaceFieldsSchema,
-  onboardingWorkspaceSchema,
-} from "@/schemas/onboarding/workspace";
-import { setLastVisitedOrganization } from "@/utils/cookies";
-import {
-  saveOnboardingAttribution,
-  triggerOnboardingBrandAnalysis,
-} from "./actions";
+  isHeardAboutNotraSource,
+} from "@/utils/onboarding";
 
 const WEBSITE_PREFIX_REGEX = /^https?:\/\//i;
 const slugSchema = z.string().slugify();
@@ -53,95 +49,24 @@ function getValidationMessage(error: unknown) {
   return "Please check this field";
 }
 
-interface ExistingOrg {
-  heardAboutNotraOther: string | null;
-  heardAboutNotraSource: string | null;
-  id: string;
-  slug: string;
-  name: string;
-}
-
-interface WorkspaceFormProps {
-  existingOrg?: ExistingOrg;
-}
-
-async function submitWorkspaceForm({
-  existingOrg,
-  value,
-}: {
-  existingOrg?: ExistingOrg;
-  value: {
-    heardAboutNotraOther: string;
-    heardAboutNotraSource: string | null | undefined;
-    name: string;
-    slug: string;
-    websiteUrl: string;
-  };
-}) {
-  const parsed = onboardingWorkspaceSchema.safeParse(value);
-
-  if (!parsed.success) {
-    throw new Error(
-      parsed.error.issues[0]?.message ?? "Please check your inputs"
-    );
-  }
-
-  let organizationId: string;
-
-  if (existingOrg) {
-    organizationId = existingOrg.id;
-  } else {
-    const { data, error } = await authClient.organization.create({
-      name: parsed.data.name,
-      slug: parsed.data.slug,
-      logo: generateOrganizationAvatar(parsed.data.slug),
-    });
-
-    if (error || !data) {
-      throw new Error(error?.message ?? "Failed to create org");
-    }
-
-    organizationId = data.id;
-
-    await authClient.organization.setActive({
-      organizationId: data.id,
-    });
-    await setLastVisitedOrganization(data.slug);
-  }
-
-  await saveOnboardingAttribution({
-    heardAboutNotraOther: parsed.data.heardAboutNotraOther,
-    heardAboutNotraSource: parsed.data.heardAboutNotraSource,
-    organizationId,
-  });
-
-  if (parsed.data.websiteUrl) {
-    const brandAnalysisPromise = triggerOnboardingBrandAnalysis({
-      organizationId,
-      websiteUrl: parsed.data.websiteUrl,
-      name: parsed.data.name,
-    });
-
-    brandAnalysisPromise.catch((error) => {
-      console.error("[Onboarding] Background brand analysis failed", {
-        organizationId,
-        error,
-      });
-    });
-  }
-}
-
 export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isResuming = !!existingOrg;
+  const existingSource = existingOrg?.heardAboutNotraSource;
+  const initialSource = isHeardAboutNotraSource(existingSource)
+    ? existingSource
+    : "";
 
   const form = useForm({
     defaultValues: {
       heardAboutNotraOther: existingOrg?.heardAboutNotraOther ?? "",
-      heardAboutNotraSource: existingOrg?.heardAboutNotraSource ?? "",
+      heardAboutNotraSource: initialSource,
       name: existingOrg?.name ?? "",
       slug: existingOrg?.slug ?? "",
       websiteUrl: "",
+    },
+    validators: {
+      onSubmit: onboardingWorkspaceFormSchema,
     },
     onSubmit: async ({ value }) => {
       setIsSubmitting(true);
@@ -186,7 +111,7 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
         <form.Field
           name="name"
           validators={{
-            onChange: onboardingWorkspaceFieldsSchema.shape.name,
+            onChange: onboardingWorkspaceFormFieldsSchema.shape.name,
           }}
         >
           {(field) => (
@@ -226,7 +151,7 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
         <form.Field
           name="slug"
           validators={{
-            onChange: onboardingWorkspaceFieldsSchema.shape.slug,
+            onChange: onboardingWorkspaceFormFieldsSchema.shape.slug,
           }}
         >
           {(field) => (
@@ -261,7 +186,7 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
           name="heardAboutNotraSource"
           validators={{
             onChange:
-              onboardingWorkspaceFieldsSchema.shape.heardAboutNotraSource,
+              onboardingWorkspaceFormFieldsSchema.shape.heardAboutNotraSource,
           }}
         >
           {(field) => (
@@ -294,7 +219,7 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
                 </div>
                 <Select
                   onValueChange={(value) => {
-                    if (!value) {
+                    if (!isHeardAboutNotraSource(value)) {
                       return;
                     }
 
@@ -336,7 +261,9 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
                 <form.Field
                   name="heardAboutNotraOther"
                   validators={{
-                    onChange: z.string().trim().max(120),
+                    onChange:
+                      onboardingWorkspaceFormFieldsSchema.shape
+                        .heardAboutNotraOther,
                   }}
                 >
                   {(otherField) => (
@@ -375,7 +302,7 @@ export function WorkspaceForm({ existingOrg }: WorkspaceFormProps) {
         <form.Field
           name="websiteUrl"
           validators={{
-            onChange: onboardingWorkspaceFieldsSchema.shape.websiteUrl,
+            onChange: onboardingWorkspaceFormFieldsSchema.shape.websiteUrl,
           }}
         >
           {(field) => (

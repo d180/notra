@@ -21,7 +21,6 @@ import {
   useOrganizationsContext,
 } from "@/components/providers/organization-provider";
 import { OrganizationMembershipActionDialog } from "@/components/settings/organization-membership-action-dialog";
-import { getHeardAboutNotraLabel } from "@/constants/onboarding";
 import { authClient } from "@/lib/auth/client";
 import {
   getOrganizationMembershipAction,
@@ -29,6 +28,7 @@ import {
 } from "@/lib/organizations/membership-action";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import { setLastVisitedOrganization } from "@/utils/cookies";
+import { getHeardAboutNotraLabel } from "@/utils/onboarding";
 import { QUERY_KEYS } from "@/utils/query-keys";
 
 export function OrganizationsSection() {

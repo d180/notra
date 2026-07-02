@@ -11,6 +11,10 @@ import {
   deleteWithTransfersSchema,
   organizationMembershipActionSchema,
 } from "@/schemas/api-params";
+import type {
+  NextOwnerCandidate,
+  OwnedOrganizationSummary,
+} from "@/types/user";
 import { badRequest, forbidden, notFound } from "../utils/errors";
 
 export const userRouter = {
@@ -26,21 +30,7 @@ export const userRouter = {
         },
       });
 
-      const ownedOrganizations: Array<{
-        heardAboutNotraOther: string | null;
-        heardAboutNotraSource: string | null;
-        id: string;
-        logo: string | null;
-        memberCount: number;
-        name: string;
-        nextOwnerCandidate: {
-          email: string;
-          id: string;
-          name: string;
-          role: string;
-        } | null;
-        slug: string;
-      }> = [];
+      const ownedOrganizations: OwnedOrganizationSummary[] = [];
 
       for (const membership of ownedMemberships) {
         const org = membership.organizations;
@@ -52,12 +42,7 @@ export const userRouter = {
 
         const memberCount = memberCountResult?.count ?? 0;
 
-        let nextOwnerCandidate: {
-          email: string;
-          id: string;
-          name: string;
-          role: string;
-        } | null = null;
+        let nextOwnerCandidate: NextOwnerCandidate | null = null;
 
         if (memberCount > 1) {
           const adminCandidate = await db.query.members.findFirst({

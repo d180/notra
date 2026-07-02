@@ -7,16 +7,19 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
 import * as z from "zod";
+import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { auth } from "@/lib/auth/server";
 import { queueBrandAnalysisForOnboarding } from "@/lib/brand-analysis";
+import { organizationIdSchema } from "@/schemas/auth/organization";
 import {
   type OnboardingBrandAnalysisInput,
   onboardingBrandAnalysisSchema,
 } from "@/schemas/brand-analysis";
-import {
-  type OnboardingWorkspaceInput,
-  onboardingWorkspaceAttributionSchema,
-} from "@/schemas/onboarding/workspace";
+import { onboardingWorkspaceAttributionSchema } from "@/schemas/onboarding/workspace";
+import type {
+  SaveOnboardingAttributionInput,
+  SaveOnboardingAttributionResult,
+} from "@/types/onboarding";
 import { ratelimit } from "@/utils/ratelimit";
 
 const ANALYSIS_LOCK_TTL_SECONDS = 60;
@@ -103,46 +106,43 @@ export async function triggerOnboardingBrandAnalysis(
   return { success: true };
 }
 
+const saveOnboardingAttributionSchema = z
+  .object({
+    organizationId: organizationIdSchema,
+  })
+  .and(onboardingWorkspaceAttributionSchema);
+
 export async function saveOnboardingAttribution(
-  rawInput: Pick<
-    OnboardingWorkspaceInput,
-    "heardAboutNotraOther" | "heardAboutNotraSource"
-  > & {
-    organizationId: string;
-  }
-) {
-  const input = z
-    .object({
-      organizationId: onboardingBrandAnalysisSchema.shape.organizationId,
-    })
-    .and(onboardingWorkspaceAttributionSchema)
-    .parse(rawInput);
+  rawInput: SaveOnboardingAttributionInput
+): Promise<SaveOnboardingAttributionResult> {
+  const parsed = saveOnboardingAttributionSchema.safeParse(rawInput);
 
-  const session = await auth.api.getSession({ headers: await headers() });
-
-  if (!session?.user) {
-    throw new Error("Unauthorized");
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid attribution details",
+    };
   }
 
-  const membership = await db.query.members.findFirst({
-    where: and(
-      eq(members.userId, session.user.id),
-      eq(members.organizationId, input.organizationId)
-    ),
-    columns: { id: true },
-  });
-
-  if (!membership) {
-    throw new Error("Forbidden");
+  try {
+    await assertOrganizationAccess({
+      headers: await headers(),
+      organizationId: parsed.data.organizationId,
+    });
+  } catch {
+    return {
+      success: false,
+      error: "You do not have access to this organization",
+    };
   }
 
   await db
     .update(organizations)
     .set({
-      heardAboutNotraSource: input.heardAboutNotraSource || null,
-      heardAboutNotraOther: input.heardAboutNotraOther || null,
+      heardAboutNotraSource: parsed.data.heardAboutNotraSource,
+      heardAboutNotraOther: parsed.data.heardAboutNotraOther,
     })
-    .where(eq(organizations.id, input.organizationId));
+    .where(eq(organizations.id, parsed.data.organizationId));
 
   return { success: true };
 }
