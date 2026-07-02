@@ -2,15 +2,25 @@
 
 import { redis } from "@notra/ai/utils/redis";
 import { db } from "@notra/db/drizzle";
-import { brandSettings, members } from "@notra/db/schema";
-import { and, eq } from "drizzle-orm";
+import { brandSettings, members, organizations } from "@notra/db/schema";
+import { ORPCError } from "@orpc/server";
+import { and, eq, isNull } from "drizzle-orm";
 import { headers } from "next/headers";
+// biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
+import * as z from "zod";
+import { assertOrganizationAccess } from "@/lib/auth/organization";
 import { auth } from "@/lib/auth/server";
 import { queueBrandAnalysisForOnboarding } from "@/lib/brand-analysis";
+import { organizationIdSchema } from "@/schemas/auth/organization";
 import {
   type OnboardingBrandAnalysisInput,
   onboardingBrandAnalysisSchema,
 } from "@/schemas/brand-analysis";
+import { onboardingWorkspaceAttributionSchema } from "@/schemas/onboarding/workspace";
+import type {
+  SaveOnboardingAttributionInput,
+  SaveOnboardingAttributionResult,
+} from "@/types/onboarding";
 import { ratelimit } from "@/utils/ratelimit";
 
 const ANALYSIS_LOCK_TTL_SECONDS = 60;
@@ -93,6 +103,73 @@ export async function triggerOnboardingBrandAnalysis(
       "Couldn't kick off the brand analysis. Please try again in a moment."
     );
   }
+
+  return { success: true };
+}
+
+const saveOnboardingAttributionSchema = z
+  .object({
+    organizationId: organizationIdSchema,
+  })
+  .and(onboardingWorkspaceAttributionSchema);
+
+export async function saveOnboardingAttribution(
+  rawInput: SaveOnboardingAttributionInput
+): Promise<SaveOnboardingAttributionResult> {
+  const parsed = saveOnboardingAttributionSchema.safeParse(rawInput);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid attribution details",
+    };
+  }
+
+  let membershipRole: string;
+
+  try {
+    const access = await assertOrganizationAccess({
+      headers: await headers(),
+      organizationId: parsed.data.organizationId,
+    });
+    membershipRole = access.membership.role;
+  } catch (error) {
+    if (error instanceof ORPCError) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    throw error;
+  }
+
+  if (membershipRole !== "owner") {
+    return {
+      success: false,
+      error: "Only the organization owner can set this",
+    };
+  }
+
+  if (
+    !(parsed.data.heardAboutNotraSource || parsed.data.heardAboutNotraOther)
+  ) {
+    return { success: true };
+  }
+
+  await db
+    .update(organizations)
+    .set({
+      heardAboutNotraSource: parsed.data.heardAboutNotraSource,
+      heardAboutNotraOther: parsed.data.heardAboutNotraOther,
+    })
+    .where(
+      and(
+        eq(organizations.id, parsed.data.organizationId),
+        isNull(organizations.heardAboutNotraSource),
+        isNull(organizations.heardAboutNotraOther)
+      )
+    );
 
   return { success: true };
 }

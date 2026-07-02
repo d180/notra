@@ -28,6 +28,7 @@ import {
 } from "@/lib/organizations/membership-action";
 import { dashboardOrpc } from "@/lib/orpc/query";
 import { setLastVisitedOrganization } from "@/utils/cookies";
+import { getHeardAboutNotraLabel } from "@/utils/onboarding";
 import { QUERY_KEYS } from "@/utils/query-keys";
 
 export function OrganizationsSection() {
@@ -45,6 +46,8 @@ export function OrganizationsSection() {
     ...dashboardOrpc.user.organizations.listOwned.queryOptions({
       select: (data) =>
         (data.ownedOrganizations ?? []).map((org) => ({
+          heardAboutNotraOther: org.heardAboutNotraOther,
+          heardAboutNotraSource: org.heardAboutNotraSource,
           id: org.id,
           memberCount: org.memberCount,
         })),
@@ -177,6 +180,9 @@ export function OrganizationsSection() {
             const ownedOrg = ownedOrganizationsById.get(org.id);
             const isOwnedByCurrentUser = !!ownedOrg;
             const hasOtherMembers = (ownedOrg?.memberCount ?? 0) > 1;
+            const heardAboutLabel = getHeardAboutNotraLabel(
+              ownedOrg?.heardAboutNotraSource
+            );
             const action =
               getOrganizationMembershipAction(isOwnedByCurrentUser);
             const actionLabel = getOrganizationMembershipActionLabel(action);
@@ -210,6 +216,15 @@ export function OrganizationsSection() {
                       )}
                     </div>
                     <p className="text-muted-foreground text-xs">{org.slug}</p>
+                    {isOwnedByCurrentUser && heardAboutLabel ? (
+                      <p className="mt-1 text-muted-foreground text-xs">
+                        Heard about Notra: {heardAboutLabel}
+                        {ownedOrg?.heardAboutNotraSource === "other" &&
+                        ownedOrg.heardAboutNotraOther
+                          ? ` (${ownedOrg.heardAboutNotraOther})`
+                          : ""}
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 

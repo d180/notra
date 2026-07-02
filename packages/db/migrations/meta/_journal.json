@@ -330,6 +330,13 @@
       "when": 1782501929903,
       "tag": "0046_true_miracleman",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1782775312760,
+      "tag": "0047_majestic_sasquatch",
+      "breakpoints": true
     }
   ]
 }
