@@ -101,11 +101,12 @@ import type { GitHubRepository } from "@/types/integrations";
 import { AttachmentPreviewDialog } from "./attachment-preview";
 import type { QueuedMessage } from "./chat-queue";
 import {
+  buildFragmentFromReferencedText,
   buildIntegrationReferenceElement,
+  hydrateLinearReferenceTeamNames,
   INTEGRATION_REFERENCE_SELECTOR,
   isIntegrationReferenceElement,
   parseIntegrationReferenceElement,
-  parseReferenceValue,
   serializeEditorWithReferences,
   serializeFragmentWithReferences,
 } from "./integration-reference";
@@ -297,6 +298,7 @@ interface ChatInputAdvancedProps {
   queuedMessages?: QueuedMessage[];
   onUpdateQueued?: (id: string, text: string) => void;
   onEmptyChange?: (isEmpty: boolean) => void;
+  draftStorageKey?: string;
   ref?: Ref<ChatInputHandle>;
 }
 
@@ -337,6 +339,7 @@ export function ChatInputAdvanced({
   onThinkingLevelChange,
   connectedTop = false,
   onEmptyChange,
+  draftStorageKey,
   ref,
 }: ChatInputAdvancedProps) {
   const currentModel =
@@ -354,7 +357,10 @@ export function ChatInputAdvanced({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const lastInitialValueRef = useRef<string | undefined>(undefined);
   const contextRef = useRef(context);
-  contextRef.current = context;
+
+  useEffect(() => {
+    contextRef.current = context;
+  }, [context]);
 
   const [attachments, setAttachments] = useState<ChatAttachment[]>([]);
   const [pendingUploads, setPendingUploads] = useState<PendingUploadItem[]>([]);
@@ -366,9 +372,12 @@ export function ChatInputAdvanced({
   const isUploading = pendingUploads.length > 0;
   const isQueued = pendingSend !== null;
   const attachmentsRef = useRef(attachments);
-  attachmentsRef.current = attachments;
   const pendingUploadsRef = useRef(pendingUploads);
-  pendingUploadsRef.current = pendingUploads;
+
+  useEffect(() => {
+    attachmentsRef.current = attachments;
+    pendingUploadsRef.current = pendingUploads;
+  }, [attachments, pendingUploads]);
   const completedUploadsRef = useRef(new Map<string, ChatAttachment>());
   const isMountedRef = useRef(true);
   const submittedKeysRef = useRef<Set<string>>(new Set());
@@ -568,7 +577,11 @@ export function ChatInputAdvanced({
   }, [cleanupChatUpload]);
 
   const onEmptyChangeRef = useRef(onEmptyChange);
-  onEmptyChangeRef.current = onEmptyChange;
+
+  useEffect(() => {
+    onEmptyChangeRef.current = onEmptyChange;
+  }, [onEmptyChange]);
+
   useEffect(() => {
     onEmptyChangeRef.current?.(isEmpty);
   }, [isEmpty]);
@@ -846,6 +859,19 @@ export function ChatInputAdvanced({
     }
     setIsEmpty(readEditorText().trim().length === 0);
 
+    if (draftStorageKey) {
+      try {
+        const draft = serializeEditorWithReferences(editor).trim();
+        if (draft) {
+          window.localStorage.setItem(draftStorageKey, draft);
+        } else {
+          window.localStorage.removeItem(draftStorageKey);
+        }
+      } catch {
+        // noop
+      }
+    }
+
     const sel = window.getSelection();
     if (!sel || sel.rangeCount === 0) {
       setMentionQuery(null);
@@ -898,7 +924,41 @@ export function ChatInputAdvanced({
     mentionAnchorRef.current = null;
     setMentionQuery(null);
     syncContextFromDOM();
-  }, [readEditorText, syncContextFromDOM]);
+  }, [draftStorageKey, readEditorText, syncContextFromDOM]);
+
+  const restoredDraftKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!draftStorageKey || restoredDraftKeyRef.current === draftStorageKey) {
+      return;
+    }
+    restoredDraftKeyRef.current = draftStorageKey;
+    const editor = editorRef.current;
+    if (!editor || initialValue || readEditorText().trim().length > 0) {
+      return;
+    }
+    try {
+      const draft = window.localStorage.getItem(draftStorageKey);
+      if (!draft) {
+        return;
+      }
+      editor.append(buildFragmentFromReferencedText(draft));
+      setIsEmpty(draft.trim().length === 0);
+      syncContextFromDOM();
+    } catch {
+      // noop
+    }
+  }, [draftStorageKey, initialValue, readEditorText, syncContextFromDOM]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || enabledLinearIntegrations.length === 0) {
+      return;
+    }
+    if (hydrateLinearReferenceTeamNames(editor, enabledLinearIntegrations)) {
+      syncContextFromDOM();
+    }
+  }, [enabledLinearIntegrations, syncContextFromDOM]);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -1056,33 +1116,7 @@ export function ChatInputAdvanced({
 
     range.deleteContents();
 
-    const fragment = document.createDocumentFragment();
-    const segments = text.split(
-      /(@?integration\/(?:github\/[^/\s]+\/[^/\s]+\/[^/\s]+|linear\/[^/\s]+))/g
-    );
-
-    for (const segment of segments) {
-      if (!segment) {
-        continue;
-      }
-
-      const referenceItem = parseReferenceValue(segment);
-      if (referenceItem) {
-        fragment.append(buildIntegrationReferenceElement(referenceItem));
-        continue;
-      }
-
-      const lines = segment.split("\n");
-      lines.forEach((line, index) => {
-        if (line) {
-          fragment.append(document.createTextNode(line));
-        }
-        if (index < lines.length - 1) {
-          fragment.append(document.createElement("br"));
-        }
-      });
-    }
-
+    const fragment = buildFragmentFromReferencedText(text);
     const lastNode = fragment.lastChild;
     range.insertNode(fragment);
 
@@ -1103,6 +1137,13 @@ export function ChatInputAdvanced({
     if (editor) {
       editor.innerHTML = "";
     }
+    if (draftStorageKey) {
+      try {
+        window.localStorage.removeItem(draftStorageKey);
+      } catch {
+        // noop
+      }
+    }
     setIsEmpty(true);
     setAttachments([]);
     attachmentsRef.current = [];
@@ -1111,7 +1152,7 @@ export function ChatInputAdvanced({
     for (const item of contextRef.current) {
       onRemoveContext?.(item);
     }
-  }, [onRemoveContext]);
+  }, [draftStorageKey, onRemoveContext]);
 
   const sendSnapshot = useCallback(
     (value: string, snapshotAttachments: ChatAttachment[]) => {
@@ -1249,7 +1290,10 @@ export function ChatInputAdvanced({
     onSend,
     performSend,
   ]);
-  submitRef.current = handleSend;
+
+  useEffect(() => {
+    submitRef.current = handleSend;
+  }, [handleSend]);
 
   useEffect(() => {
     if (!(pendingSend && !isUploading)) {
