@@ -3,6 +3,7 @@
 import { redis } from "@notra/ai/utils/redis";
 import { db } from "@notra/db/drizzle";
 import { brandSettings, members, organizations } from "@notra/db/schema";
+import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 // biome-ignore lint/performance/noNamespaceImport: Zod recommended way to import
@@ -129,11 +130,15 @@ export async function saveOnboardingAttribution(
       headers: await headers(),
       organizationId: parsed.data.organizationId,
     });
-  } catch {
-    return {
-      success: false,
-      error: "You do not have access to this organization",
-    };
+  } catch (error) {
+    if (error instanceof ORPCError) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    throw error;
   }
 
   await db
